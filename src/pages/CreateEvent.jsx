@@ -7,6 +7,7 @@ const CreateEvent = ({ darkMode }) => {
   const [activeCategory, setActiveCategory] = useState('Technology');
   const [publicEvent, setPublicEvent] = useState(true);
   const [approvalRequired, setApprovalRequired] = useState(false);
+  const [coverImage, setCoverImage] = useState(null);
   const categories = ['Technology', 'Design', 'Business', 'Music', 'Networking', 'Education'];
 
   const glassStyle = darkMode 
@@ -18,6 +19,13 @@ const CreateEvent = ({ darkMode }) => {
       ? 'bg-slate-900/50 border-slate-700 focus:bg-slate-800 text-white placeholder-white' 
       : 'bg-white/50 border-white focus:bg-white text-slate-900'
   }`;
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCoverImage(URL.createObjectURL(file));
+    }
+  };
 
   return (
     <Motion.main 
@@ -101,13 +109,20 @@ const CreateEvent = ({ darkMode }) => {
             <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
               <ImageIcon size={16} /> Cover Image
             </h3>
-            <div className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-blue-200 hover:border-blue-500 bg-blue-50/50'}`}>
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-3">
-                <ImageIcon size={24} />
-              </div>
-              <p className={`text-sm font-bold mb-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Click to upload</p>
-              <p className={`text-xs opacity-100 font-medium ${darkMode ? 'text-white' : 'text-slate-600'}`}>PNG, JPG up to 5MB</p>
-            </div>
+            <label className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors relative overflow-hidden ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-blue-200 hover:border-blue-500 bg-blue-50/50'}`}>
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              {coverImage ? (
+                <img src={coverImage} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-3">
+                    <ImageIcon size={24} />
+                  </div>
+                  <p className={`text-sm font-bold mb-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Click to upload</p>
+                  <p className={`text-xs opacity-100 font-medium ${darkMode ? 'text-white' : 'text-slate-600'}`}>PNG, JPG up to 5MB</p>
+                </>
+              )}
+            </label>
           </Motion.div>
 
           <Motion.div whileHover={{ scale: 1.02 }} className={`p-6 rounded-[2rem] border ${glassStyle}`}>

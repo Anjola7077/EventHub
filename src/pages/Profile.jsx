@@ -11,6 +11,7 @@ const Profile = ({ darkMode }) => {
   const [newInterest, setNewInterest] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
 
   const glassStyle = darkMode 
     ? 'bg-slate-800 border-slate-700' 
@@ -78,15 +79,20 @@ const Profile = ({ darkMode }) => {
         
         <div className="px-8 pb-8 relative">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 -mt-16 mb-6">
-            <div className="relative group cursor-pointer">
+            <label className="relative group cursor-pointer block">
               <div className="w-32 h-32 rounded-[2rem] border-4 border-white dark:border-slate-800 overflow-hidden shadow-2xl bg-slate-200 dark:bg-slate-700">
                 
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Anjola&backgroundColor=c0aede" alt="Profile" className="w-full h-full object-cover" />
+                <img src={profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=Anjola&backgroundColor=c0aede"} alt="Profile" className="w-full h-full object-cover" />
               </div>
               <div className="absolute inset-0 bg-black/40 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
                 <Camera className="text-white" size={28} />
               </div>
-            </div>
+              <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                if (e.target.files[0]) {
+                  setProfileImage(URL.createObjectURL(e.target.files[0]));
+                }
+              }} />
+            </label>
             
             <div className="flex flex-wrap gap-3 w-full md:w-auto justify-start md:justify-end">
               <button className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`} onClick={() => console.log('Share clicked')}>

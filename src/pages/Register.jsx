@@ -42,7 +42,15 @@ const Register = ({ darkMode }) => {
   };
 
   const handleFormChange = (field) => (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    let value;
+    if (e.target.type === 'checkbox') {
+      value = e.target.checked;
+    } else if (e.target.type === 'file') {
+      const file = e.target.files[0];
+      value = file ? URL.createObjectURL(file) : '';
+    } else {
+      value = e.target.value;
+    }
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -218,15 +226,25 @@ const Register = ({ darkMode }) => {
                   <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Profile Images</label>
                   <div className="relative mb-8">
                     {/* Cover Photo */}
-                    <label className={`block h-32 w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${darkMode ? 'border-slate-700 bg-slate-800/50 hover:border-blue-500' : 'border-slate-300 bg-slate-50 hover:border-blue-500'}`}>
+                    <label className={`block h-32 w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden relative ${darkMode ? 'border-slate-700 bg-slate-800/50 hover:border-blue-500' : 'border-slate-300 bg-slate-50 hover:border-blue-500'}`}>
                       <input type="file" className="hidden" accept="image/*" onChange={handleFormChange('coverPhoto')} />
-                      <ImageIcon className={`mb-2 ${form.coverPhoto ? 'text-blue-500' : 'text-slate-400'}`} size={24} />
-                      <span className="text-xs font-semibold text-slate-500">{form.coverPhoto ? 'Cover photo selected' : 'Upload Cover Photo'}</span>
+                      {form.coverPhoto ? (
+                        <img src={form.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <ImageIcon className={`mb-2 ${form.coverPhoto ? 'text-blue-500' : 'text-slate-400'}`} size={24} />
+                          <span className="text-xs font-semibold text-slate-500">{form.coverPhoto ? 'Cover photo selected' : 'Upload Cover Photo'}</span>
+                        </>
+                      )}
                     </label>
                     {/* Profile Picture */}
-                    <label className={`absolute -bottom-6 left-6 h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-colors ${darkMode ? 'border-slate-900 bg-slate-800 hover:border-blue-500' : 'border-white bg-slate-100 hover:border-blue-500'}`}>
+                    <label className={`absolute -bottom-6 left-6 h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${darkMode ? 'border-slate-900 bg-slate-800 hover:border-blue-500' : 'border-white bg-slate-100 hover:border-blue-500'}`}>
                       <input type="file" className="hidden" accept="image/*" onChange={handleFormChange('profilePicture')} />
-                      <Camera className={form.profilePicture ? 'text-blue-500' : 'text-slate-400'} size={20} />
+                      {form.profilePicture ? (
+                        <img src={form.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className={form.profilePicture ? 'text-blue-500' : 'text-slate-400'} size={20} />
+                      )}
                     </label>
                   </div>
                 </div>

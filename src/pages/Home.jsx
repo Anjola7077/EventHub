@@ -1,9 +1,33 @@
-import React from 'react';
-import { motion as Motion } from 'framer-motion';
-import { CalendarPlus, Compass, Users, Ticket, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { CalendarPlus, Compass, Users, Ticket, ArrowRight, Bell, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const mockActivities = [
+  { id: 1, type: 'event_update', message: 'React Summit 2024 has a new speaker!', time: '2 hours ago' },
+  { id: 2, type: 'new_message', message: 'Sarah K. sent you a message.', time: '5 hours ago' },
+  { id: 3, type: 'event_reminder', message: 'Your "Design Thinking Workshop" starts tomorrow!', time: 'Yesterday' },
+  { id: 4, type: 'event_update', message: 'New details added to "AI in Business" event.', time: '2 days ago' },
+];
+
 const Home = ({ darkMode }) => {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+  const [activities, setActivities] = useState(mockActivities);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifications]);
+
   const cards = [
     { id: 'create', title: 'Create', description: 'Build new events and grow your audience.', icon: CalendarPlus, path: '/create-event' },
     { id: 'discover', title: 'Discover', description: 'Find curated events near you.', icon: Compass, path: '/events' },
@@ -17,6 +41,66 @@ const Home = ({ darkMode }) => {
       className={`pt-32 pb-20 px-4 md:px-8 min-h-screen ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}
     >
       <div className="mx-auto max-w-7xl px-4 py-8">
+        {/* Floating Notification Button */}
+        <div className="fixed bottom-6 right-6 z-50" ref={notificationRef}>
+          <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors">
+            <Bell size={24} />
+            {activities.length > 0 && (
+              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                {activities.length}
+              </span>
+            )}
+          </button>
+
+          {/* Notification Popup */}
+          <AnimatePresence>
+            {showNotifications && (
+              <Motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                className={`absolute bottom-full right-0 mb-4 w-80 rounded-2xl shadow-xl overflow-hidden z-50 
+                            ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+                  <h3 className="text-lg font-bold">Notifications</h3>
+                  <div className="flex items-center gap-3">
+                    {activities.length > 0 && (
+                      <button onClick={() => setActivities([])} className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                        Clear All
+                      </button>
+                    )}
+                    <button onClick={() => setShowNotifications(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700">
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4 max-h-80 overflow-y-auto">
+                  {activities.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No new notifications.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {activities.map(activity => (
+                        <li key={activity.id} className="flex gap-3">
+                          <div className="flex-shrink-0">
+                            {activity.type === 'event_update' && <CalendarPlus size={18} className="text-blue-500" />}
+                            {activity.type === 'new_message' && <Users size={18} className="text-emerald-500" />}
+                            {activity.type === 'event_reminder' && <Bell size={18} className="text-amber-500" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium leading-tight">{activity.message}</p>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{activity.time}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </Motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
         <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-12">
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-3xl bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-lg overflow-hidden">

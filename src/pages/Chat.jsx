@@ -332,21 +332,21 @@ const Chat = ({ darkMode }) => {
             <button onClick={cancelReply} className="p-1 hover:bg-slate-500/20 rounded-full transition-colors shrink-0"><X size={14}/></button>
           </div>
         )}
-        <form onSubmit={handleSend} className={`p-5 bg-white/40 dark:bg-slate-950/70 ${editingMessageId || replyingToMessage ? '' : 'border-t border-black/10 dark:border-white/10'} flex items-center gap-3`}>
+        <form onSubmit={handleSend} className={`p-3 sm:p-5 bg-white/40 dark:bg-slate-950/70 ${editingMessageId || replyingToMessage ? '' : 'border-t border-black/10 dark:border-white/10'} flex items-center gap-2 sm:gap-3`}>
           <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3.5 rounded-2xl text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors">
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 sm:p-3.5 shrink-0 rounded-2xl text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors">
             <Paperclip size={20} />
           </button>
           
           {isRecording ? (
-            <div className="flex-1 bg-red-500/10 border border-red-500/20 rounded-full px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3 text-red-500">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                <span className="text-sm font-bold animate-pulse">Recording...</span>
+            <div className="flex-1 min-w-0 bg-red-500/10 border border-red-500/20 rounded-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 sm:gap-3 text-red-500 truncate">
+                <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 shrink-0 rounded-full bg-red-500 animate-pulse"></span>
+                <span className="text-xs sm:text-sm font-bold animate-pulse truncate">Recording...</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-red-500">{formatDuration(recordingDuration)}</span>
-                <button type="button" onClick={cancelRecording} className="p-1.5 hover:bg-red-500/20 rounded-full text-red-500 transition-colors" title="Cancel Recording">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <span className="text-xs sm:text-sm font-bold text-red-500">{formatDuration(recordingDuration)}</span>
+                <button type="button" onClick={cancelRecording} className="p-1 sm:p-1.5 hover:bg-red-500/20 rounded-full text-red-500 transition-colors" title="Cancel Recording">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -357,23 +357,23 @@ const Chat = ({ darkMode }) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Type your message here..." 
-              className={`flex-1 bg-white/70 dark:bg-slate-900/80 border border-black/10 dark:border-white/10 rounded-full px-6 py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:opacity-100 ${darkMode ? 'text-white placeholder-white' : 'text-slate-900'}`}
+              className={`flex-1 min-w-0 bg-white/70 dark:bg-slate-900/80 border border-black/10 dark:border-white/10 rounded-full px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:opacity-100 ${darkMode ? 'text-white placeholder-white' : 'text-slate-900'}`}
             />
           )}
 
           {inputValue.trim() && !isRecording ? (
-            <button type="submit" className="p-4 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 transition-all shadow-lg shadow-blue-600/30">
+            <button type="submit" className="p-3 sm:p-4 shrink-0 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 transition-all shadow-lg shadow-blue-600/30">
               <Send size={20} className="translate-x-0.5 -translate-y-0.5" />
             </button>
           ) : (
-            <button type="button" onClick={toggleRecording} className={`p-4 rounded-2xl transition-all shadow-lg ${isRecording ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-105 shadow-red-500/30' : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 shadow-blue-600/30'}`}>
+            <button type="button" onClick={toggleRecording} className={`p-3 sm:p-4 shrink-0 rounded-2xl transition-all shadow-lg ${isRecording ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-105 shadow-red-500/30' : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 shadow-blue-600/30'}`}>
               {isRecording ? <Square size={18} fill="currentColor" /> : <Mic size={20} />}
             </button>
           )}
         </form>
       </div>
 
-      {/* Fullscreen Image Modal */}
+     
       <AnimatePresence>
         {selectedImage && (
           <Motion.div

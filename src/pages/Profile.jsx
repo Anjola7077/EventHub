@@ -72,7 +72,6 @@ const Profile = ({ darkMode }) => {
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
       className="pt-24 pb-20 px-4 md:px-8 max-w-5xl mx-auto"
     >
-      {}
       <div className={`rounded-[2.5rem] overflow-hidden border mb-8 ${glassStyle}`}>
         <div className="h-48 bg-blue-600 relative">
         </div>
@@ -125,7 +124,6 @@ const Profile = ({ darkMode }) => {
           </div>
         </div>
 
-        {}
         <div className="px-8 pb-8 pt-6 border-t border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5">
           <h3 className={`text-xs font-black uppercase tracking-widest opacity-100 mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Interests</h3>
           <div className="flex flex-wrap items-center gap-3">
@@ -151,9 +149,7 @@ const Profile = ({ darkMode }) => {
         </div>
       </div>
 
-      {}
       <div className={`rounded-[2.5rem] border overflow-hidden ${glassStyle}`}>
-        {}
         <div className="flex p-2 bg-black/5 dark:bg-white/5 mx-6 mt-6 rounded-[2rem] overflow-x-auto no-scrollbar relative">
           {tabs.map((tab) => {
             const Icon = tab.icon;

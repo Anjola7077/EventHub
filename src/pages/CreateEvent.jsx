@@ -136,7 +136,7 @@ const CreateEvent = ({ darkMode }) => {
                   <p className={`text-[10px] font-semibold opacity-100 uppercase ${darkMode ? 'text-white' : 'text-slate-600'}`}>Visible to everyone</p>
                 </div>
                 <div className="w-12 h-6 bg-blue-500 rounded-full relative cursor-pointer shadow-inner" onClick={() => setPublicEvent(!publicEvent)}>
-                  <Motion.div layout className="w-5 h-5 bg-white rounded-full absolute shadow-md" animate={{ left: publicEvent ? 'calc(100% - 20px)' : '2px', top: '2px' }} />
+                <Motion.div className="w-5 h-5 bg-white rounded-full absolute shadow-md" animate={{ left: publicEvent ? 'calc(100% - 20px)' : '2px', top: '2px' }} transition={{ type: "spring", stiffness: 500, damping: 30 }} />
                 </div>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5">
@@ -145,7 +145,7 @@ const CreateEvent = ({ darkMode }) => {
                   <p className={`text-[10px] font-semibold opacity-100 uppercase ${darkMode ? 'text-white' : 'text-slate-600'}`}>Manual RSVP check</p>
                 </div>
                 <div className="w-12 h-6 bg-slate-300 dark:bg-slate-700 rounded-full relative cursor-pointer shadow-inner" onClick={() => setApprovalRequired(!approvalRequired)}>
-                  <Motion.div layout className="w-5 h-5 bg-white rounded-full absolute shadow-md" animate={{ left: approvalRequired ? 'calc(100% - 20px)' : '2px', top: '2px' }} />
+                <Motion.div className="w-5 h-5 bg-white rounded-full absolute shadow-md" animate={{ left: approvalRequired ? 'calc(100% - 20px)' : '2px', top: '2px' }} transition={{ type: "spring", stiffness: 500, damping: 30 }} />
                 </div>
               </div>
             </div>

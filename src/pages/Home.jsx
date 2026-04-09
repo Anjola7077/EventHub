@@ -16,6 +16,17 @@ const Home = ({ darkMode }) => {
   const [activities, setActivities] = useState(mockActivities);
 
   useEffect(() => {
+    // Safely suppress benign ResizeObserver errors that trigger Vercel's crash overlay on window resize
+    const handleResizeError = (e) => {
+      if (e.message === 'ResizeObserver loop limit exceeded' || e.message === 'ResizeObserver loop completed with undelivered notifications.') {
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener('error', handleResizeError);
+    return () => window.removeEventListener('error', handleResizeError);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);

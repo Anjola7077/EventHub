@@ -188,7 +188,6 @@ const Chat = ({ darkMode }) => {
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
       className="pt-32 pb-6 px-4 md:px-8 max-w-7xl mx-auto min-h-screen flex flex-col gap-6"
     >
-      {}
       <div className={`flex items-center justify-between p-5 rounded-3xl border ${glassStyle} flex-shrink-0`}>
         <div>
           <span className="text-xs font-black uppercase tracking-widest text-blue-500 mb-1 block">Technology</span>
@@ -202,7 +201,6 @@ const Chat = ({ darkMode }) => {
 
       {/* Chat Interface */}
       <div className={`flex-1 flex flex-col border rounded-[3rem] overflow-hidden shadow-2xl ${glassStyle}`}>
-        {}
         <div className="px-8 py-5 border-b border-black/10 dark:border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-950/60 backdrop-blur-lg">
           {isSearching ? (
             <div className="flex items-center gap-3 flex-1 h-12">
@@ -242,7 +240,6 @@ const Chat = ({ darkMode }) => {
           )}
         </div>
 
-        {}
         <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-white/10 dark:bg-slate-950/40">
           <AnimatePresence>
             {filteredMessages.map((msg) => (

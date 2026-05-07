@@ -1,404 +1,817 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Send, Paperclip, Search, MoreVertical, X, Image as ImageIcon, MapPin, Calendar, CheckCircle2, Mic, Square, Play, FileText, Pencil, Trash2, Reply } from 'lucide-react';
+import { Send, Paperclip, Mic, Image as ImageIcon, Smile, X, Check, CheckCheck, Reply, CornerDownRight, ArrowLeft, Square, FileText, Download, Loader2, Trash2, Play, Edit2, Pin, Ban, MessageSquare } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
+import api from '../api/axios';
+import { io } from 'socket.io-client';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 
-const Chat = ({ darkMode }) => {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'System', text: 'Welcome to the React Summit 2024 chat! Say hello.', isSystem: true },
-    { id: 2, sender: 'Sarah K.', avatar: 'SK', text: 'So excited for this event! Anyone else flying in from NYC?', isOwn: false, time: '10:42 AM' },
-    { id: 3, sender: 'James T.', avatar: 'JT', text: 'Already here in SF! The venue looks amazing', isOwn: false, time: '10:45 AM' },
-  ]);
-  const [inputValue, setInputValue] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [editingMessageId, setEditingMessageId] = useState(null);
-  const [replyingToMessage, setReplyingToMessage] = useState(null);
-  const fileInputRef = useRef(null);
-  const chatEndRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const recordingDurationRef = useRef(0);
-  const isCancelledRef = useRef(false);
+const getDateLabel = (dateInput) => {
+  const date = dateInput ? new Date(dateInput) : new Date();
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
 
-  const glassStyle = darkMode 
-    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl' 
-    : 'bg-white/50 border-white/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.1)]';
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+  });
+};
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
+const WaveformPlayer = ({ src, isOwn, darkMode }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef(null);
+  
+  // Generate random heights for the waveform bars
+  const [bars] = useState(() => Array.from({ length: 30 }, () => Math.max(30, Math.random() * 100)));
 
-    if (editingMessageId) {
-      setMessages(messages.map(msg => 
-        msg.id === editingMessageId ? { ...msg, text: inputValue, isEdited: true } : msg
-      ));
-      setEditingMessageId(null);
+  const togglePlay = () => {
+    if (audioRef.current.paused) {
+      audioRef.current.play();
+      setIsPlaying(true);
     } else {
-      setMessages([...messages, {
-        id: Date.now(),
-        sender: 'You',
-        text: inputValue,
-        isOwn: true,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        ...(replyingToMessage ? { replyTo: replyingToMessage } : {})
-      }]);
-      setReplyingToMessage(null);
+      audioRef.current.pause();
+      setIsPlaying(false);
     }
-    setInputValue('');
-  };
-
-  const cancelEdit = () => {
-    setEditingMessageId(null);
-    setInputValue('');
-  };
-
-  const handleEdit = (msg) => {
-    setReplyingToMessage(null);
-    setEditingMessageId(msg.id);
-    setInputValue(msg.text || '');
-  };
-
-  const handleReply = (msg) => {
-    setEditingMessageId(null);
-    setInputValue('');
-    setReplyingToMessage(msg);
-  };
-
-  const cancelReply = () => setReplyingToMessage(null);
-
-  const handleDelete = (id) => {
-    setMessages(messages.filter(msg => msg.id !== id));
-    if (editingMessageId === id) cancelEdit();
-    if (replyingToMessage?.id === id) cancelReply();
-  };
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    let interval;
-    if (isRecording) {
-      interval = setInterval(() => {
-        setRecordingDuration(prev => {
-          recordingDurationRef.current = prev + 1;
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRecording]);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    setMessages([...messages, {
-      id: Date.now(),
-      sender: 'You',
-      isOwn: true,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      ...(isImage ? { image: URL.createObjectURL(file) } : { file: { name: file.name, size: (file.size / 1024).toFixed(1) + ' KB' } })
-    }]);
-    e.target.value = null;
-  };
-
-  const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const cancelRecording = () => {
-    isCancelledRef.current = true;
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-    }
-  };
-
-  const toggleRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-      }
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-          if (!isCancelledRef.current) {
-            const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            
-            setMessages(prev => [...prev, {
-              id: Date.now(),
-              sender: 'You',
-              isOwn: true,
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              audioUrl: audioUrl,
-              duration: formatDuration(recordingDurationRef.current)
-            }]);
-          }
-          
-          stream.getTracks().forEach(track => track.stop());
-          setIsRecording(false);
-          setRecordingDuration(0);
-          recordingDurationRef.current = 0;
-          isCancelledRef.current = false;
-        };
-
-        mediaRecorder.start();
-        setRecordingDuration(0);
-        recordingDurationRef.current = 0;
-        setIsRecording(true);
-      } catch (err) {
-        console.error("Error accessing microphone:", err);
-        alert("Could not access microphone. Please check your browser permissions.");
-      }
-    }
-  };
-
-  const filteredMessages = messages.filter(msg => 
-    (msg.text && msg.text.toLowerCase().includes(searchQuery.toLowerCase())) || 
-    (msg.file && msg.file.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (msg.sender && msg.sender.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const highlightText = (text, query) => {
-    if (!query || !query.trim() || !text) return text;
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return parts.map((part, index) => 
-      part.toLowerCase() === query.toLowerCase() ? 
-        <mark key={index} className="bg-yellow-400 text-slate-900 rounded px-0.5 font-bold bg-opacity-90">{part}</mark> : part
-    );
   };
 
   return (
-    <Motion.main 
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      className="pt-32 pb-6 px-4 md:px-8 max-w-7xl mx-auto min-h-screen flex flex-col gap-6"
+    <div className={`flex items-center gap-2 p-2 rounded-2xl mb-2 w-48 sm:w-64 border ${isOwn ? 'bg-blue-700/50 border-blue-500/50' : darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-100 border-slate-200'}`}>
+      <button 
+        type="button" onClick={togglePlay} 
+        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isOwn ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+      >
+        {isPlaying ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
+      </button>
+      <div className="flex-1 h-6 flex items-center gap-[2px] cursor-pointer" onClick={(e) => {
+        if (!audioRef.current || !audioRef.current.duration) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * audioRef.current.duration;
+      }}>
+         {bars.map((height, i) => (
+            <div key={i} className={`flex-1 rounded-full transition-all duration-75 ${(i / 30) * 100 <= progress ? (isOwn ? 'bg-white' : 'bg-blue-600') : (isOwn ? 'bg-white/30' : darkMode ? 'bg-slate-500' : 'bg-slate-300')}`} style={{ height: `${height}%` }} />
+         ))}
+      </div>
+      <audio ref={audioRef} src={src} onTimeUpdate={() => setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100)} onEnded={() => { setIsPlaying(false); setProgress(0); }} className="hidden" />
+    </div>
+  );
+};
+
+const Chat = ({ darkMode }) => {
+  const { eventId } = useParams();
+  const { user } = useContext(AuthContext);
+  const [event, setEvent] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [isFetchingMessages, setIsFetchingMessages] = useState(true);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [replyingToMessage, setReplyingToMessage] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [mentionSearch, setMentionSearch] = useState(null);
+  const [error, setError] = useState('');
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
+  const messagesEndRef = useRef(null);
+  const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const documentInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    
+    const socketUrl = api.defaults.baseURL ? api.defaults.baseURL.replace('/api/v1', '') : 'http://localhost:5000';
+    socketRef.current = io(socketUrl, {
+      withCredentials: true
+    });
+
+    socketRef.current.emit('join_event_chat', eventId);
+
+    const fetchMessages = async () => {
+      try {
+        setIsFetchingMessages(true);
+        const [eventRes, msgRes] = await Promise.all([
+          api.get(`/events/${eventId}`),
+          api.get(`/events/${eventId}/messages`)
+        ]);
+        setEvent(eventRes.data.data);
+        
+        const fetchedMessages = msgRes.data.data.map(m => ({
+          ...m,
+          isOwn: m.senderId === user?._id || m.senderId === user?.id
+        }));
+        setMessages(fetchedMessages);
+
+        // Notify the server that we've read any previously unread messages
+        const unreadMessages = msgRes.data.data.filter(m => m.sender !== (user?.fullName || 'You') && m.status !== 'read');
+        unreadMessages.forEach(m => socketRef.current.emit('markAsRead', { messageId: m._id, eventId }));
+      } catch (error) {
+        console.error("Failed to fetch event or messages");
+      } finally {
+        setIsFetchingMessages(false);
+      }
+    };
+    fetchMessages();
+    
+    socketRef.current.on('receive_message', (newMessage) => {
+      const formattedMsg = { ...newMessage, isOwn: newMessage.senderId === user?._id || newMessage.senderId === user?.id };
+      setMessages(prev => prev.some(msg => msg._id === formattedMsg._id) ? prev : [...prev, formattedMsg]);
+      
+      // Automatically mark incoming messages as read
+      if (newMessage.sender !== (user?.fullName || 'You')) {
+        socketRef.current.emit('markAsRead', { messageId: newMessage._id, eventId });
+      }
+    });
+
+   
+    socketRef.current.on('messageRead', (messageId) => {
+      setMessages(prev => prev.map(msg => msg._id === messageId ? { ...msg, status: 'read' } : msg));
+    });
+
+    socketRef.current.on('typing', (userName) => {
+      if (userName !== (user?.fullName || 'You')) {
+        setTypingUsers(prev => prev.includes(userName) ? prev : [...prev, userName]);
+      }
+    });
+
+    socketRef.current.on('stopTyping', (userName) => {
+      setTypingUsers(prev => prev.filter(name => name !== userName));
+    });
+
+    socketRef.current.on('messageDeleted', (messageId) => {
+      setMessages(prev => prev.filter(msg => msg._id !== messageId));
+    });
+
+    socketRef.current.on('messageEdited', ({ messageId, text, isEdited }) => {
+      setMessages(prev => prev.map(msg => msg._id === messageId ? { ...msg, text, isEdited: isEdited || true } : msg));
+    });
+
+    socketRef.current.on('messagePinned', ({ messageId, isPinned }) => {
+      setMessages(prev => prev.map(msg => msg._id === messageId ? { ...msg, isPinned } : msg));
+    });
+
+    socketRef.current.on('userBanned', ({ userId }) => {
+      if (userId === (user?._id || user?.id)) {
+        setEvent(prev => ({ ...prev, bannedUsers: [...(prev?.bannedUsers || []), userId] }));
+      }
+    });
+
+    return () => socketRef.current?.disconnect();
+  }, [eventId, user]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!inputValue.trim() && !selectedImage && !audioBlob && !selectedDocument) return;
+    setError('');
+    setIsSending(true);
+
+    clearTimeout(typingTimeoutRef.current);
+    if (socketRef.current) socketRef.current.emit('stopTyping', { eventId, userName: user?.fullName || 'Anonymous' });
+    
+    if (editingMessage) {
+      if (socketRef.current) {
+        socketRef.current.emit('editMessage', { eventId, messageId: editingMessage._id, text: inputValue });
+      }
+      setMessages(prev => prev.map(msg => msg._id === editingMessage._id ? { ...msg, text: inputValue, isEdited: true } : msg));
+      setEditingMessage(null);
+      setInputValue('');
+      setIsSending(false);
+      return;
+    }
+
+    try {
+      let payload;
+      let config = {};
+
+      if (selectedImage || audioBlob || selectedDocument) {
+        payload = new FormData();
+        if (inputValue) payload.append('text', inputValue);
+        if (replyingToMessage) payload.append('replyTo', replyingToMessage._id);
+        if (selectedImage) payload.append('image', selectedImage);
+        if (audioBlob) payload.append('audio', audioBlob, 'voicenote.webm');
+        if (selectedDocument) payload.append('document', selectedDocument);
+        config = {};
+        payload = {};
+        if (inputValue) payload.text = inputValue;
+        if (replyingToMessage) payload.replyTo = replyingToMessage._id;
+        if (selectedImage) payload.image = selectedImage;
+        if (audioBlob) payload.audio = new File([audioBlob], 'voicenote.webm', { type: 'audio/webm' });
+        if (selectedDocument) payload.document = selectedDocument;
+        config = { headers: { 'Content-Type': 'multipart/form-data' } };
+      } else {
+        payload = {
+          text: inputValue,
+          replyTo: replyingToMessage ? replyingToMessage._id : null
+        };
+      }
+
+      const res = await api.post(`/events/${eventId}/messages`, payload, config);
+      
+      const newMsg = { ...res.data.data, isOwn: true };
+      setMessages(prev => prev.some(msg => msg._id === newMsg._id) ? prev : [...prev, newMsg]);
+      
+      // Clear inputs only on success so users don't lose data if it fails!
+      setInputValue('');
+      setSelectedImage(null);
+      setAudioBlob(null);
+      setSelectedDocument(null);
+      setShowEmojiPicker(false);
+      setReplyingToMessage(null);
+      setShowAttachMenu(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (documentInputRef.current) documentInputRef.current.value = '';
+    } catch (error) {
+      setError("Failed to send message.");
+      setTimeout(() => setError(''), 3000); // Hide error after 3 seconds
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await api.delete(`/events/${eventId}/messages/${messageId}`);
+      setMessages(prev => prev.filter(msg => msg._id !== messageId));
+    } catch (error) {
+      setError("Failed to delete message.");
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleReply = (msg) => {
+    setReplyingToMessage(msg);
+  };
+
+  const cancelReply = () => {
+    setReplyingToMessage(null);
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImage(file);
+      setShowAttachMenu(false);
+    }
+  };
+
+  const handleDocumentSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedDocument(file);
+      setShowAttachMenu(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    
+    const match = val.match(/@([a-zA-Z0-9_]*)$/);
+    if (match) {
+      setMentionSearch(match[1].toLowerCase());
+    } else {
+      setMentionSearch(null);
+    }
+
+    if (socketRef.current) {
+      socketRef.current.emit('typing', { eventId, userName: user?.fullName || 'Anonymous' });
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socketRef.current.emit('stopTyping', { eventId, userName: user?.fullName || 'Anonymous' });
+      }, 2000);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      setError('Microphone access denied.');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      setIsRecording(false);
+    }
+  };
+
+  const scrollToMessage = (msgId) => {
+    const el = document.getElementById(`message-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'background-color 0.5s ease';
+      el.style.backgroundColor = darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)';
+      el.style.borderRadius = '0.5rem';
+      setTimeout(() => {
+        el.style.backgroundColor = 'transparent';
+      }, 1500);
+    }
+  };
+
+  const pinnedMessages = messages.filter(m => m.isPinned);
+  const activePinnedMessage = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
+  const isOrganizer = event && (event.organizer === user?._id || event.organizer?._id === user?._id || event.creator === user?._id || event.creator?._id === user?._id);
+  const isBanned = event?.bannedUsers?.includes(user?._id || user?.id);
+  const uniqueAttendees = event?.attendees ? [...new Set(event.attendees.map(a => a.user?.fullName || a.fullName || 'Anonymous'))].filter(n => n !== 'Anonymous') : [];
+  const filteredMentions = mentionSearch !== null ? uniqueAttendees.filter(name => name.replace(/\s+/g, '').toLowerCase().includes(mentionSearch)) : [];
+
+  // Check if user is registered and approved for this event
+  const isUserRegistered = event?.attendees?.some(attendee => {
+    const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
+    return attendeeId === (user?._id || user?.id);
+  });
+  const isUserApproved = event?.attendees?.some(attendee => {
+    const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
+    return attendeeId === (user?._id || user?.id) && attendee.isVerified === true;
+  });
+
+  // Only allow access if user is approved, or if they're the organizer/creator
+  const hasAccess = isUserApproved || isOrganizer;
+
+  if (!hasAccess) {
+    return (
+      <Motion.div 
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className={`fixed inset-0 z-50 flex flex-col pt-20 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}
+      >
+        <div className={`px-4 py-3 border-b flex items-center justify-between shadow-sm z-10 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="flex items-center gap-3">
+            <Link to={`/event-details/${eventId}`} className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}>
+              <ArrowLeft size={20} />
+            </Link>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black overflow-hidden shadow-md">
+                <img src={event?.coverImage || `https://api.dicebear.com/7.x/shapes/svg?seed=${eventId}`} alt="Group" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <h2 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{event?.title || 'Event Community'}</h2>
+                <p className={`text-xs font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Access Restricted</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className={`max-w-md w-full text-center p-8 rounded-[2rem] border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} shadow-xl`}>
+            <div className={`w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+              <MessageSquare size={32} className={darkMode ? 'text-slate-400' : 'text-slate-500'} />
+            </div>
+            <h3 className={`text-xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Chat Access Restricted</h3>
+            <p className={`text-sm font-medium mb-6 leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              {isUserRegistered && !isUserApproved 
+                ? "Your registration is pending approval. You'll be able to join the chat once approved."
+                : "You need to register and be approved for this event to access the chat."
+              }
+            </p>
+            <Link 
+              to={`/event-details/${eventId}`}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-colors shadow-lg shadow-blue-600/30"
+            >
+              View Event Details
+            </Link>
+          </div>
+        </div>
+      </Motion.div>
+    );
+  }
+
+  return (
+    <Motion.div 
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className={`fixed inset-0 z-50 flex flex-col pt-20 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}
     >
-      <div className={`flex items-center justify-between p-5 rounded-3xl border ${glassStyle} flex-shrink-0`}>
-        <div>
-          <span className="text-xs font-black uppercase tracking-widest text-blue-500 mb-1 block">Technology</span>
-          <h1 className={`text-2xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>React Summit 2024</h1>
-          <div className={`flex gap-4 text-sm font-medium opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-            <span className="flex items-center gap-1.5"><Calendar size={16} /> Jun 15, 2024</span>
-            <span className="flex items-center gap-1.5"><MapPin size={16} /> San Francisco, CA</span>
+      <div className={`px-4 py-3 border-b flex items-center justify-between shadow-sm z-10 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+        <div className="flex items-center gap-3">
+          <Link to={`/event-details/${eventId}`} className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}>
+            <ArrowLeft size={20} />
+          </Link>
+          <div className="flex items-center gap-3 cursor-pointer">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black overflow-hidden shadow-md">
+                <img src={event?.coverImage || `https://api.dicebear.com/7.x/shapes/svg?seed=${eventId}`} alt="Group" className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></div>
+            </div>
+            <div>
+              <h2 className={`text-sm font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{event?.title || 'Event Community'}</h2>
+              <p className={`text-xs font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{event?.attendees?.length || 0} members</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Chat Interface */}
-      <div className={`flex-1 flex flex-col border rounded-[3rem] overflow-hidden shadow-2xl ${glassStyle}`}>
-        <div className="px-8 py-5 border-b border-black/10 dark:border-white/10 flex justify-between items-center bg-white/40 dark:bg-slate-950/60 backdrop-blur-lg">
-          {isSearching ? (
-            <div className="flex items-center gap-3 flex-1 h-12">
-              <Search size={20} className={darkMode ? 'text-white' : 'text-slate-400'} />
-              <input 
-                autoFocus
-                type="text" 
-                placeholder="Search messages..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={`flex-1 bg-transparent border-none outline-none text-sm font-medium ${darkMode ? 'text-white placeholder-slate-400' : 'text-slate-900 placeholder-slate-500'}`}
-              />
-              <button onClick={() => { setIsSearching(false); setSearchQuery(''); }} className={`p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                <X size={20} />
-              </button>
+      {activePinnedMessage && (
+        <div className={`px-4 py-2 border-b flex items-center justify-between shadow-sm z-10 cursor-pointer transition-colors ${darkMode ? 'bg-blue-900/20 border-blue-900/50 hover:bg-blue-900/30' : 'bg-blue-50 border-blue-100 hover:bg-blue-100/70'} backdrop-blur-md`} onClick={() => scrollToMessage(activePinnedMessage._id)}>
+          <div className="flex items-center gap-3 overflow-hidden">
+            <Pin size={16} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <div className="overflow-hidden">
+              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-0.5">Pinned Message</p>
+              <p className={`text-xs truncate ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                {activePinnedMessage.text || 'Attachment'}
+              </p>
             </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
-                  <CheckCircle2 size={22} />
-                </div>
-                <div>
-                  <h2 className={`font-black text-xl md:text-2xl leading-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Event Chat</h2>
-                  <span className={`text-sm font-semibold opacity-100 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 24 online
-                  </span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsSearching(true)}
-                className={`p-3 rounded-2xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}
-              >
-                <Search size={22} />
-              </button>
-            </>
-          )}
+          </div>
         </div>
+      )}
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-white/10 dark:bg-slate-950/40">
-          <AnimatePresence>
-            {filteredMessages.map((msg) => (
-              msg.isSystem ? (
-                <Motion.div key={msg.id} initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="flex justify-center">
-                  <span className={`px-5 py-2 bg-black/10 dark:bg-white/10 rounded-full text-sm font-semibold opacity-100 ${darkMode ? 'text-white' : 'text-slate-700'}`}>
-                    {highlightText(msg.text, searchQuery)}
-                  </span>
-                </Motion.div>
-              ) : (
+      <AnimatePresence>
+        {error && (
+          <Motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+            {error}
+          </Motion.div>
+        )}
+      </AnimatePresence>
+
+      {isFetchingMessages ? (
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className={`flex ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+              <div className={`h-12 w-48 sm:w-64 rounded-[1.5rem] animate-pulse ${darkMode ? 'bg-slate-800/50' : 'bg-slate-100'}`} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar pb-32">
+          {messages.map((msg, idx) => {
+            const currentLabel = getDateLabel(msg.createdAt);
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            const prevLabel = prevMsg ? getDateLabel(prevMsg.createdAt) : null;
+            const showDateBoundary = currentLabel !== prevLabel;
+
+            return (
+              <React.Fragment key={msg._id || idx}>
+                {showDateBoundary && (
+                  <div className="text-center my-6">
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-200 text-slate-500'}`}>
+                      {currentLabel}
+                    </span>
+                  </div>
+                )}
                 <Motion.div 
-                  key={msg.id} 
+                  id={`message-${msg._id}`}
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-end gap-4 group ${msg.isOwn ? 'flex-row-reverse' : ''}`}
+                  className={`flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'}`}
                 >
-                  {!msg.isOwn && (
-                    <div className="w-11 h-11 rounded-2xl bg-blue-500 flex items-center justify-center text-white text-sm font-black shadow-lg flex-shrink-0">
-                      {msg.avatar}
+                  <span className={`text-xs font-bold mb-1 ${msg.isOwn ? 'mr-1' : 'ml-1'} ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {msg.isOwn ? 'You' : msg.sender}
+                  </span>
+                  <div className={`group relative max-w-[75%] sm:max-w-[60%] flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'}`}>
+                    <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity px-2 flex gap-2" style={{ [msg.isOwn ? 'right' : 'left']: '100%' }}>
+                      <button onClick={() => handleReply(msg)} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-100'} shadow-sm`}>
+                        <Reply size={14} />
+                      </button>
+                      {isOrganizer && !msg.isOwn && (
+                        <button onClick={() => { if(window.confirm('Ban this user from the chat?')) { socketRef.current?.emit('banUser', { eventId, userId: msg.senderId }); } }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-red-400 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50'} shadow-sm transition-colors`} title="Ban User">
+                          <Ban size={14} />
+                        </button>
+                      )}
+                      {isOrganizer && (
+                        <button onClick={() => { if(socketRef.current) socketRef.current.emit('pinMessage', { eventId, messageId: msg._id }) }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-amber-400 hover:bg-amber-500/20' : 'bg-white text-amber-500 hover:bg-amber-50'} shadow-sm transition-colors`} title={msg.isPinned ? 'Unpin' : 'Pin'}>
+                          <Pin size={14} className={msg.isPinned ? 'fill-current' : ''} />
+                        </button>
+                      )}
+                      {msg.isOwn && (
+                        <button onClick={() => { setEditingMessage(msg); setInputValue(msg.text || ''); setReplyingToMessage(null); }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-blue-400 hover:bg-blue-500/20' : 'bg-white text-blue-500 hover:bg-blue-50'} shadow-sm transition-colors`}>
+                          <Edit2 size={14} />
+                        </button>
+                      )}
+                      {msg.isOwn && (
+                        <button onClick={() => handleDeleteMessage(msg._id)} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-red-400 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50'} shadow-sm transition-colors`}>
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
-                  )}
-                  <div className={`flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'} max-w-[80%]`}> 
-                    {!msg.isOwn && <span className={`text-sm font-semibold opacity-100 mb-1 ml-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {highlightText(msg.sender, searchQuery)}
-                    </span>}
-                    <div className={`px-6 py-4 shadow-xl ${
+                    <div className={`relative px-4 py-2.5 shadow-sm ${
                       msg.isOwn 
-                        ? 'bg-blue-600 text-white rounded-[24px_24px_8px_24px]' 
-                        : `bg-slate-100 dark:bg-slate-900 rounded-[24px_24px_24px_8px] border border-black/5 dark:border-white/10 ${darkMode ? 'text-white' : 'text-slate-900'}`
+                        ? 'bg-blue-600 text-white rounded-[1.5rem] rounded-tr-sm' 
+                        : `${darkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 border border-slate-100'} rounded-[1.5rem] rounded-tl-sm`
                     }`}>
+                      {msg.isPinned && (
+                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-sm z-10">
+                          <Pin size={10} className="fill-current" />
+                        </div>
+                      )}
                       {msg.replyTo && (
-                        <div className={`text-xs mb-2 p-2 rounded-lg border-l-2 ${msg.isOwn ? 'bg-blue-700/30 border-white/50 text-white' : 'bg-black/5 border-black/20 dark:bg-white/5 dark:border-white/20 text-inherit'}`}>
-                          <span className="font-bold block text-[10px] uppercase opacity-70 mb-0.5">{msg.replyTo.sender}</span>
-                          <span className="line-clamp-1">{msg.replyTo.text || 'Attachment'}</span>
+                        <div 
+                          onClick={() => scrollToMessage(msg.replyTo._id || msg.replyTo)}
+                          className={`cursor-pointer hover:opacity-80 transition-opacity mb-2 pl-3 border-l-2 text-xs py-1 pr-2 rounded-r-lg ${msg.isOwn ? 'border-blue-300 bg-blue-700/50 text-blue-100' : `${darkMode ? 'border-blue-500 bg-slate-700 text-slate-300' : 'border-blue-500 bg-slate-50 text-slate-600'}`}`}
+                        >
+                          <div className="font-bold mb-0.5">{msg.replyTo.sender}</div>
+                          <div className="truncate opacity-90">{msg.replyTo.text || 'Photo'}</div>
                         </div>
                       )}
-                      {msg.text && <p className="text-base font-medium leading-relaxed tracking-wide">{highlightText(msg.text, searchQuery)}</p>}
-                      {msg.image && (
-                        <div className={`overflow-hidden rounded-xl cursor-pointer ${msg.text ? 'mt-3' : ''}`} onClick={() => setSelectedImage(msg.image)}>
-                          <img src={msg.image} alt="Attachment" className="max-w-[200px] sm:max-w-[250px] object-cover hover:opacity-90 transition-opacity" />
-                        </div>
+                      {(msg.image || msg.imageUrl) && (
+                        <img 
+                          src={msg.image || msg.imageUrl} 
+                          alt="Attached" 
+                          className="rounded-lg mb-2 max-w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                          onClick={() => setLightboxImage(msg.image || msg.imageUrl)}
+                        />
                       )}
-                      {msg.file && (
-                        <div className="flex items-center gap-3">
-                          <div className="p-3 bg-white/20 dark:bg-black/20 rounded-xl"><FileText size={24} /></div>
-                          <div>
-                            <p className="text-sm font-bold line-clamp-1 max-w-[200px]">{highlightText(msg.file.name, searchQuery)}</p>
-                            <p className="text-xs opacity-70 mt-0.5">{msg.file.size}</p>
-                          </div>
-                        </div>
+                      {(msg.audio || msg.audioUrl) && (
+                        <WaveformPlayer 
+                          src={msg.audio || msg.audioUrl} 
+                          isOwn={msg.isOwn} 
+                          darkMode={darkMode}
+                        />
                       )}
-                      {msg.audioUrl && (
-                        <div className={`mt-1 ${msg.text ? 'pt-2 border-t border-black/5 dark:border-white/10' : ''}`}>
-                          <audio controls src={msg.audioUrl} className="h-10 w-48 sm:w-64 outline-none" />
-                        </div>
+                      {(msg.document || msg.documentUrl) && (
+                        <a 
+                          href={msg.document || msg.documentUrl} target="_blank" rel="noopener noreferrer" 
+                          className={`flex items-center gap-3 p-3 mb-2 rounded-xl border ${msg.isOwn ? 'bg-blue-700/50 border-blue-500 text-white hover:bg-blue-800' : darkMode ? 'bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'} transition-colors cursor-pointer`}
+                        >
+                          <FileText size={24} className={msg.isOwn ? "text-blue-200" : "text-blue-500"} />
+                          <span className="text-sm font-bold truncate max-w-[150px] sm:max-w-[200px]">{msg.documentName || 'Document'}</span>
+                          <Download size={16} className={`ml-auto flex-shrink-0 ${msg.isOwn ? "text-blue-200" : "text-slate-400"}`} />
+                        </a>
                       )}
-                    </div>
-                    <div className={`flex items-center gap-2 mt-1 ${msg.isOwn ? '' : 'flex-row-reverse'}`}>
-                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleReply(msg)} className="p-1 hover:text-blue-500 transition-colors" title="Reply"><Reply size={14} /></button>
-                        {msg.isOwn && (
-                          <>
-                            <button onClick={() => handleEdit(msg)} className="p-1 hover:text-blue-500 transition-colors" title="Edit"><Pencil size={14} /></button>
-                            <button onClick={() => handleDelete(msg.id)} className="p-1 hover:text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
-                          </>
-                        )}
+                      {msg.text && (
+                        <p className="text-sm font-medium leading-relaxed break-words">
+                          {msg.text.split(/(@[a-zA-Z0-9_]+)/g).map((part, i) => 
+                            part.startsWith('@') ? <span key={i} className="text-blue-600 dark:text-blue-400 font-black bg-blue-500/10 px-1 rounded-md">{part}</span> : part
+                          )}
+                        </p>
+                      )}
+                      <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${msg.isOwn ? 'text-blue-200' : `${darkMode ? 'text-slate-400' : 'text-slate-400'}`}`}>
+                        {msg.isEdited && <span className="italic opacity-80 mr-1">(edited)</span>}
+                        <span>{msg.time}</span>
+                        {msg.isOwn && (msg.status === 'read' ? <CheckCheck size={12} /> : <Check size={12} />)}
                       </div>
-                      <span className={`text-xs font-semibold opacity-70 ${darkMode ? 'text-white' : 'text-slate-600'}`}>{msg.time} {msg.isEdited && '(edited)'}</span>
                     </div>
                   </div>
                 </Motion.div>
-              )
-            ))}
-          </AnimatePresence>
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input Area */}
-        {editingMessageId && (
-          <div className="px-6 py-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center justify-between border-t border-black/10 dark:border-white/10">
-            <span>Editing message...</span>
-            <button onClick={cancelEdit} className="p-1 hover:bg-blue-500/20 rounded-full transition-colors"><X size={14}/></button>
-          </div>
-        )}
-        {replyingToMessage && (
-          <div className="px-6 py-2 bg-slate-500/10 text-slate-600 dark:text-slate-300 text-xs font-bold flex items-center justify-between border-t border-black/10 dark:border-white/10">
-            <span className="truncate pr-4">Replying to {replyingToMessage.sender}: <span className="font-medium opacity-80">{replyingToMessage.text || 'Attachment'}</span></span>
-            <button onClick={cancelReply} className="p-1 hover:bg-slate-500/20 rounded-full transition-colors shrink-0"><X size={14}/></button>
-          </div>
-        )}
-        <form onSubmit={handleSend} className={`p-3 sm:p-5 bg-white/40 dark:bg-slate-950/70 ${editingMessageId || replyingToMessage ? '' : 'border-t border-black/10 dark:border-white/10'} flex items-center gap-2 sm:gap-3`}>
-          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 sm:p-3.5 shrink-0 rounded-2xl text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors">
-            <Paperclip size={20} />
-          </button>
+              </React.Fragment>
+            );
+          })}
           
-          {isRecording ? (
-            <div className="flex-1 min-w-0 bg-red-500/10 border border-red-500/20 rounded-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 sm:gap-3 text-red-500 truncate">
-                <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 shrink-0 rounded-full bg-red-500 animate-pulse"></span>
-                <span className="text-xs sm:text-sm font-bold animate-pulse truncate">Recording...</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <span className="text-xs sm:text-sm font-bold text-red-500">{formatDuration(recordingDuration)}</span>
-                <button type="button" onClick={cancelRecording} className="p-1 sm:p-1.5 hover:bg-red-500/20 rounded-full text-red-500 transition-colors" title="Cancel Recording">
-                  <Trash2 size={16} />
-                </button>
-              </div>
+          <AnimatePresence>
+            {typingUsers.length > 0 && (
+              <Motion.div 
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                className={`text-xs font-semibold italic flex items-center gap-2 mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+              >
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                {typingUsers.join(', ')} {typingUsers.length > 1 ? 'are' : 'is'} typing...
+              </Motion.div>
+            )}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      <div className={`fixed bottom-0 left-0 right-0 p-3 sm:p-4 border-t shadow-[0_-10px_40px_rgba(0,0,0,0.05)] ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} backdrop-blur-xl`}>
+        <div className="max-w-4xl mx-auto">
+          {isBanned ? (
+            <div className={`p-4 text-center font-bold rounded-2xl border ${darkMode ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-red-50 text-red-600 border-red-200'}`}>
+              You have been banned from this event chat room by the organizer.
             </div>
           ) : (
-            <input 
-              type="text" 
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type your message here..." 
-              className={`flex-1 min-w-0 bg-white/70 dark:bg-slate-900/80 border border-black/10 dark:border-white/10 rounded-full px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:opacity-100 ${darkMode ? 'text-white placeholder-white' : 'text-slate-900'}`}
-            />
-          )}
+            <>
+          <AnimatePresence>
+            {editingMessage && (
+              <Motion.div 
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`flex items-start justify-between p-3 mb-2 rounded-xl border-l-4 border-emerald-500 ${darkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}
+              >
+                <div className="flex gap-2 overflow-hidden">
+                  <Edit2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-black text-emerald-500 mb-0.5">Editing Message</p>
+                    <p className="text-xs truncate opacity-80">{editingMessage.text || 'Photo'}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setEditingMessage(null); setInputValue(''); }} className={`p-1 rounded-full ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-500'}`}>
+                  <X size={16} />
+                </button>
+              </Motion.div>
+            )}
+            {replyingToMessage && (
+              <Motion.div 
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`flex items-start justify-between p-3 mb-2 rounded-xl border-l-4 border-blue-500 ${darkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}
+              >
+                <div className="flex gap-2 overflow-hidden">
+                  <CornerDownRight size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-black text-blue-500 mb-0.5">Replying to {replyingToMessage.sender}</p>
+                    <p className="text-xs truncate opacity-80">{replyingToMessage.text || 'Photo'}</p>
+                  </div>
+                </div>
+                <button onClick={cancelReply} className={`p-1 rounded-full ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-500'}`}>
+                  <X size={16} />
+                </button>
+              </Motion.div>
+            )}
+            
+            {selectedImage && (
+              <Motion.div 
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`relative inline-block mb-2 p-2 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <img src={URL.createObjectURL(selectedImage)} alt="Preview" className="h-20 w-auto rounded-lg object-cover shadow-sm" />
+                <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors">
+                  <X size={12} />
+                </button>
+              </Motion.div>
+            )}
 
-          {inputValue.trim() && !isRecording ? (
-            <button type="submit" className="p-3 sm:p-4 shrink-0 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 transition-all shadow-lg shadow-blue-600/30">
-              <Send size={20} className="translate-x-0.5 -translate-y-0.5" />
-            </button>
-          ) : (
-            <button type="button" onClick={toggleRecording} className={`p-3 sm:p-4 shrink-0 rounded-2xl transition-all shadow-lg ${isRecording ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-105 shadow-red-500/30' : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 shadow-blue-600/30'}`}>
-              {isRecording ? <Square size={18} fill="currentColor" /> : <Mic size={20} />}
-            </button>
+            {audioBlob && (
+              <Motion.div 
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`relative inline-block mb-2 p-2 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <WaveformPlayer src={URL.createObjectURL(audioBlob)} isOwn={false} darkMode={darkMode} />
+                <button type="button" onClick={() => setAudioBlob(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors z-10">
+                  <X size={12} />
+                </button>
+              </Motion.div>
+            )}
+            
+            {selectedDocument && (
+              <Motion.div 
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`relative inline-block mb-2 p-3 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <div className="flex items-center gap-3 pr-4">
+                  <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center"><FileText size={20} /></div>
+                  <span className={`text-sm font-bold truncate max-w-[150px] ${darkMode ? 'text-white' : 'text-slate-900'}`}>{selectedDocument.name}</span>
+                </div>
+                <button type="button" onClick={() => setSelectedDocument(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors">
+                  <X size={12} />
+                </button>
+              </Motion.div>
+            )}
+          </AnimatePresence>
+          <form onSubmit={handleSend} className="flex items-end gap-2 relative">
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleImageSelect} 
+            />
+            <input 
+              type="file" 
+              accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv" 
+              className="hidden" 
+              ref={documentInputRef} 
+              onChange={handleDocumentSelect} 
+            />
+            <AnimatePresence>
+              {showAttachMenu && (
+                <Motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className={`absolute bottom-full left-0 mb-4 p-2 rounded-2xl shadow-xl flex gap-2 border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                >
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-3 rounded-xl flex flex-col items-center gap-1 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
+                    <div className="w-10 h-10 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center"><ImageIcon size={20} /></div>
+                    <span className="text-[10px] font-bold">Photo</span>
+                  </button>
+                  <button type="button" onClick={() => documentInputRef.current?.click()} className={`p-3 rounded-xl flex flex-col items-center gap-1 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><Paperclip size={20} /></div>
+                    <span className="text-[10px] font-bold">File</span>
+                  </button>
+                </Motion.div>
+              )}
+              {mentionSearch !== null && filteredMentions.length > 0 && (
+                <Motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className={`absolute bottom-full left-12 mb-4 p-2 w-64 max-h-48 overflow-y-auto rounded-2xl shadow-2xl border z-50 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                >
+                  {filteredMentions.map(name => (
+                    <button 
+                      key={name} type="button"
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-colors ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-900'}`}
+                      onClick={() => {
+                        const formattedName = name.replace(/\s+/g, '');
+                        const newVal = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `@${formattedName} `);
+                        setInputValue(newVal);
+                        setMentionSearch(null);
+                      }}
+                    >
+                      @{name.replace(/\s+/g, '')} <span className="opacity-50 font-normal ml-1">({name})</span>
+                    </button>
+                  ))}
+                </Motion.div>
+              )}
+              {showEmojiPicker && (
+                <Motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className="absolute bottom-full right-0 mb-4 z-50 shadow-2xl rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-700"
+                >
+                  <Picker data={data} onEmojiSelect={(emoji) => setInputValue(prev => prev + emoji.native)} theme={darkMode ? 'dark' : 'light'} />
+                </Motion.div>
+              )}
+            </AnimatePresence>
+            <div className={`flex-1 flex items-end rounded-[1.5rem] border overflow-hidden transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 focus-within:border-slate-500' : 'bg-slate-50 border-slate-200 focus-within:border-blue-300'}`}>
+              <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} className={`p-3.5 outline-none ${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}>
+                <Paperclip size={20} />
+              </button>
+              <textarea 
+                value={inputValue} onChange={handleInputChange}
+                onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if(!isSending) handleSend(e); } }}
+                placeholder="Type a message..." rows={1}
+                className={`flex-1 max-h-32 min-h-[48px] py-3.5 bg-transparent border-none focus:ring-0 resize-none text-sm font-medium outline-none ${darkMode ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+              />
+              <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className={`p-3.5 outline-none transition-colors ${showEmojiPicker ? 'text-blue-500' : darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}>
+                <Smile size={20} />
+              </button>
+            </div>
+            {(inputValue.trim() || selectedImage || audioBlob || selectedDocument || isSending) ? (
+              <Motion.button 
+                initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                type="submit" disabled={isSending}
+                className="w-[48px] h-[48px] rounded-[1.2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 hover:bg-blue-700 flex-shrink-0 disabled:opacity-80 transition-all"
+              >
+                {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-1" />}
+              </Motion.button>
+            ) : (
+              <Motion.button 
+                initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                type="button" 
+                onClick={isRecording ? stopRecording : startRecording} 
+                className={`w-[48px] h-[48px] rounded-[1.2rem] flex items-center justify-center shadow-sm flex-shrink-0 transition-colors ${isRecording ? 'bg-red-500 text-white shadow-red-500/30 animate-pulse' : `${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}`}
+              >
+                {isRecording ? <Square size={16} fill="currentColor" /> : <Mic size={20} />}
+              </Motion.button>
+            )}
+          </form>
+            </>
           )}
-        </form>
+        </div>
       </div>
 
-     
+      {/* Image Lightbox Overlay */}
       <AnimatePresence>
-        {selectedImage && (
-          <Motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+        {lightboxImage && (
+          <Motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
-            onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 cursor-pointer"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 sm:p-8 cursor-zoom-out"
+            onClick={() => setLightboxImage(null)}
           >
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+            <button 
+              className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-[101]"
+              onClick={() => setLightboxImage(null)}
             >
               <X size={24} />
             </button>
-            <Motion.img
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              src={selectedImage}
-              alt="Fullscreen Attachment"
-              className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl cursor-default"
-              onClick={(e) => e.stopPropagation()}
+            <Motion.img 
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              src={lightboxImage} 
+              alt="Fullscreen Preview" 
+              className="max-w-full max-h-full object-contain rounded-xl shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()} 
             />
           </Motion.div>
         )}
       </AnimatePresence>
-    </Motion.main>
+    </Motion.div>
   );
 };
 

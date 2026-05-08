@@ -421,6 +421,8 @@ const EventDashboard = ({ darkMode }) => {
 
   const currentAttendees = filteredAttendees.slice(0, visibleCount);
 
+  const hasHappened = eventData?.date ? new Date(eventData.date) < new Date() : true;
+
   return (
     <Motion.main 
       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
@@ -673,7 +675,7 @@ const EventDashboard = ({ darkMode }) => {
                   <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
                     Cancel
                   </button>
-                  <button type="button" onClick={handleDelete} disabled={isSaving} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50`}>
+                  <button type="button" onClick={handleDelete} disabled={isSaving || !hasHappened} title={!hasHappened ? "Events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>
                     Delete
                   </button>
                   <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">

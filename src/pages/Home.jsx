@@ -55,13 +55,39 @@ const Home = ({ darkMode }) => {
   }, [user]);
 
   const enablePushNotifications = async () => {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Push notifications are not supported by your browser.');
+      return;
+    }
     
     try {
       const permission = await Notification.requestPermission();
       setPushPermission(permission);
       
       if (permission === 'granted') {
+        // 1. Register the Service Worker
+        const registration = await navigator.serviceWorker.register('/sw.js');
+
+        // 2. Convert VAPID key for the PushManager
+        const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        const urlBase64ToUint8Array = (base64String) => {
+          const padding = '='.repeat((4 - base64String.length % 4) % 4);
+          const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+          return outputArray;
+        };
+
+        // 3. Subscribe the user's browser
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+        });
+
+        // 4. Send the subscription to your backend to save to the user's database document
+        await api.post('/notifications/subscribe', subscription);
+
         new Notification("Notifications Enabled!", {
           body: "You'll be alerted when your events start.",
           icon: "/logo.png"

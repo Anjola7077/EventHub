@@ -21,6 +21,7 @@ const Register = ({ darkMode }) => {
   const [isResending, setIsResending] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [errors, setErrors] = useState({});
+  const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken'
   
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -61,6 +62,25 @@ const Register = ({ darkMode }) => {
   const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
+    if (!form.username) {
+      setUsernameStatus('');
+      return;
+    }
+
+    setUsernameStatus('checking');
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await api.post('/auth/check-username', { username: form.username });
+        setUsernameStatus(res.data.available ? 'available' : 'taken');
+      } catch (err) {
+        setUsernameStatus('');
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [form.username]);
+
+  useEffect(() => {
     let interval;
     if (resendTimer > 0) {
       interval = setInterval(() => {
@@ -87,7 +107,7 @@ const Register = ({ darkMode }) => {
   const handleNextStep1 = () => {
     const newErrors = {};
     if (!form.name) newErrors.name = true;
-    if (!form.username) newErrors.username = true;
+    if (!form.username || usernameStatus === 'taken') newErrors.username = true;
     if (!form.email) newErrors.email = true;
     if (!form.gender) newErrors.gender = true;
     if (!form.phone) newErrors.phone = true;
@@ -104,6 +124,7 @@ const Register = ({ darkMode }) => {
       setErrors(newErrors);
       if (!newErrors.password || form.password === form.confirmPassword) {
         setError('Please fill in all highlighted fields.');
+        if (usernameStatus === 'taken') setError('That username is already taken.');
       }
       return;
     }
@@ -339,8 +360,11 @@ const Register = ({ darkMode }) => {
                       <label className="text-sm font-bold text-slate-900 dark:text-white">Username</label>
                       <div className="relative">
                         <span className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>@</span>
-                        <input value={form.username} onChange={handleFormChange('username')} placeholder="alex_games" className={`w-full rounded-2xl border px-10 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition ${errors.username ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : (darkMode ? 'bg-slate-900/60 border-slate-700 text-white placeholder-slate-400' : 'bg-white border-slate-200 text-slate-900')}`} />
+                      <input value={form.username} onChange={handleFormChange('username')} placeholder="alex_games" className={`w-full rounded-2xl border px-10 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 transition ${errors.username || usernameStatus === 'taken' ? 'border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-500/10' : usernameStatus === 'available' ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : (darkMode ? 'bg-slate-900/60 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500' : 'bg-white border-slate-200 text-slate-900 focus:ring-blue-500')}`} />
                       </div>
+                    {usernameStatus === 'checking' && <p className="text-xs font-bold text-blue-500 mt-1">Checking availability...</p>}
+                    {usernameStatus === 'available' && <p className="text-xs font-bold text-emerald-500 mt-1">Username is available!</p>}
+                    {usernameStatus === 'taken' && <p className="text-xs font-bold text-red-500 mt-1">Username is already taken.</p>}
                     </div>
                   </div>
                   <div className="grid gap-4">

@@ -216,6 +216,7 @@ const Register = ({ darkMode }) => {
       } else {
         await api.post('/auth/register', {
           fullName: form.name,
+          username: form.username,
           email: form.email,
           password: form.password,
           role: 'user',

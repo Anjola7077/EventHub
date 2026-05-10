@@ -12,8 +12,12 @@ api.interceptors.response.use(
   (error) => {
     // If the backend says the token is invalid, expired, or the user was deleted
     if (error.response && error.response.status === 401) {
-      // Redirect the user to the login page
-      if (window.location.pathname !== '/login') {
+      // Define pages where unauthenticated users are allowed to be
+      const publicPages = ['/login', '/register', '/', '/home', '/events'];
+      const isPublic = publicPages.includes(window.location.pathname) || window.location.pathname.startsWith('/event-details/');
+      
+      // Only force redirect to login if they are on a private dashboard/profile page
+      if (!isPublic) {
         window.location.href = '/login';
       }
     }

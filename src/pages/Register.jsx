@@ -341,7 +341,10 @@ const Register = ({ darkMode }) => {
       setIsComplete(true);
       setStep(5);
       
-      // Instantly log the user in on the frontend
+      // Save token and instantly log the user in on the frontend
+      if (res.data?.token) {
+        localStorage.setItem('token', res.data.token);
+      }
       if (setUser) {
         setUser(res.data?.user || res.data?.data);
       }

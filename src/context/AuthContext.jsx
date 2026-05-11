@@ -61,14 +61,17 @@ export const AuthProvider = ({ children }) => {
     if (user && !loading) {
       const socketUrl = api.defaults.baseURL ? api.defaults.baseURL.replace('/api/v1', '') : 'http://localhost:5000';
 
-      // Get the token from cookies
-      const getTokenFromCookie = () => {
+      // Get the token from localStorage or fallback to cookies
+      const getToken = () => {
+        const localToken = localStorage.getItem('token');
+        if (localToken) return localToken;
+        
         const cookies = document.cookie.split(';');
         const tokenCookie = cookies.find(c => c.trim().startsWith('token='));
         return tokenCookie ? tokenCookie.split('=')[1] : null;
       };
 
-      const token = getTokenFromCookie();
+      const token = getToken();
 
       try {
         socket = io(socketUrl, {

@@ -6,6 +6,15 @@ const api = axios.create({
   withCredentials: true, 
 });
 
+// Add a request interceptor to automatically attach the token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Add a response interceptor to handle global errors
 api.interceptors.response.use(
   (response) => response,
@@ -18,6 +27,7 @@ api.interceptors.response.use(
       
       // Only force redirect to login if they are on a private dashboard/profile page
       if (!isPublic) {
+        localStorage.removeItem('token');
         window.location.href = '/login';
       }
     }

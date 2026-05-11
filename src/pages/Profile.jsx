@@ -227,7 +227,10 @@ const Profile = ({ darkMode }) => {
     try {
       await api.delete('/users/me'); 
       if (logout) await logout();
-      else await api.get('/auth/logout'); 
+      else {
+        localStorage.removeItem('token');
+        await api.get('/auth/logout');
+      }
       setShowDeleteModal(false);
       setDeletePassword('');
       navigate('/login', { replace: true });

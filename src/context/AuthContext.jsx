@@ -117,11 +117,18 @@ export const AuthProvider = ({ children }) => {
   }, [user, loading]);
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
+        if (res.data?.token) {
+      localStorage.setItem('token', res.data.token);
+    }
     setUser(res.data?.data || res.data?.user || res.data);
     return res;
   };
 
   const logout = async () => {
+     localStorage.removeItem('token');
+    try {
+      await api.get('/auth/logout');
+    } catch (err) {}
     setUser(null);
   };
 

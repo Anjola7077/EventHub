@@ -336,10 +336,15 @@ const Register = ({ darkMode }) => {
     const otpCode = otp.join('');
     
     try {
-      await api.post('/auth/verify', { email: form.email, otp: otpCode });
+      const res = await api.post('/auth/verify', { email: form.email, otp: otpCode });
       localStorage.removeItem('resendOtpExpiry'); // Cleanup on success
       setIsComplete(true);
       setStep(5);
+      
+      // Instantly log the user in on the frontend
+      if (setUser) {
+        setUser(res.data?.user || res.data?.data);
+      }
     } catch (error) {
       setError(error.response?.data?.error || "Invalid verification code. Please check your email.");
     } finally {

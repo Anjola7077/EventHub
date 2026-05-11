@@ -38,7 +38,14 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    // Fetch initial unread notification count
+    // Add a small delay to prevent rapid re-renders
+    const timeoutId = setTimeout(checkAuth, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, []); // Run ONLY once on mount!
+
+  // Fetch initial unread notification count when user becomes available
+  useEffect(() => {
     if (user && !loading) {
       api.get('/users/notifications')
         .then(res => {
@@ -48,11 +55,6 @@ export const AuthProvider = ({ children }) => {
         })
         .catch(() => {});
     }
-
-    // Add a small delay to prevent rapid re-renders
-    const timeoutId = setTimeout(checkAuth, 100);
-
-    return () => clearTimeout(timeoutId);
   }, [user, loading]);
 
   // Global Socket.io listener for real-time personal notifications

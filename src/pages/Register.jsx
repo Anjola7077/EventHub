@@ -22,6 +22,7 @@ const Register = ({ darkMode }) => {
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [errors, setErrors] = useState({});
   const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken'
+  const [emailStatus, setEmailStatus] = useState(''); // 'checking', 'available', 'taken'
   
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -61,6 +62,25 @@ const Register = ({ darkMode }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [agreed, setAgreed] = useState(false);
 
+  const passwordRequirements = {
+    length: form.password.length >= 8,
+    upper: /[A-Z]/.test(form.password),
+    lower: /[a-z]/.test(form.password),
+    number: /\d/.test(form.password),
+    special: /[!@#$%^&*(),.?":{}|<>\-_]/.test(form.password),
+  };
+  const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
+  
+  const passwordScore = Object.values(passwordRequirements).filter(Boolean).length;
+  let strengthLabel = '';
+  let strengthColor = '';
+  let strengthWidth = '0%';
+  if (form.password.length > 0) {
+    if (passwordScore <= 2) { strengthLabel = 'Weak'; strengthColor = 'bg-red-500'; strengthWidth = '33%'; }
+    else if (passwordScore <= 4) { strengthLabel = 'Good'; strengthColor = 'bg-amber-500'; strengthWidth = '66%'; }
+    else { strengthLabel = 'Strong'; strengthColor = 'bg-emerald-500'; strengthWidth = '100%'; }
+  }
+
   useEffect(() => {
     if (!form.username) {
       setUsernameStatus('');
@@ -79,6 +99,32 @@ const Register = ({ darkMode }) => {
 
     return () => clearTimeout(delayDebounceFn);
   }, [form.username]);
+
+  useEffect(() => {
+    if (!form.email) {
+      setEmailStatus('');
+      return;
+    }
+    
+    // Only run backend check if it loosely looks like a valid email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setEmailStatus('');
+      return;
+    }
+
+    setEmailStatus('checking');
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await api.post('/auth/check-email', { email: form.email });
+        setEmailStatus(res.data.available ? 'available' : 'taken');
+      } catch (err) {
+        setEmailStatus('');
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [form.email]);
 
   useEffect(() => {
     let interval;
@@ -108,24 +154,38 @@ const Register = ({ darkMode }) => {
     const newErrors = {};
     if (!form.name) newErrors.name = true;
     if (!form.username || usernameStatus === 'taken') newErrors.username = true;
-    if (!form.email) newErrors.email = true;
+    if (!form.email || emailStatus === 'taken') newErrors.email = true;
     if (!form.gender) newErrors.gender = true;
     if (!form.phone) newErrors.phone = true;
+    
+    let errorMessage = 'Please fill in all highlighted fields.';
+
     if (!isEditing) {
-      if (!form.password) newErrors.password = true;
+      if (!form.password) {
+        newErrors.password = true;
+      } else if (!isPasswordValid) {
+        newErrors.password = true;
+        errorMessage = 'Please meet all password requirements.';
+      }
+      
       if (!form.confirmPassword) newErrors.confirmPassword = true;
-      if (form.password && form.confirmPassword && form.password !== form.confirmPassword) {
+      
+      if (form.password && isPasswordValid && form.confirmPassword && form.password !== form.confirmPassword) {
         newErrors.password = true;
         newErrors.confirmPassword = true;
-        setError('Passwords do not match.');
+        errorMessage = 'Passwords do not match.';
       }
     }
+
+    if (emailStatus === 'taken') {
+      errorMessage = 'That email address is already registered.';
+    } else if (usernameStatus === 'taken') {
+      errorMessage = 'That username is already taken.';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      if (!newErrors.password || form.password === form.confirmPassword) {
-        setError('Please fill in all highlighted fields.');
-        if (usernameStatus === 'taken') setError('That username is already taken.');
-      }
+      setError(errorMessage);
       return;
     }
     goToStep(2);
@@ -230,6 +290,11 @@ const Register = ({ darkMode }) => {
           interests: selectedInterests
         });
         localStorage.removeItem('registrationDraft');
+        
+        const expiry = Date.now() + 60 * 1000;
+        localStorage.setItem('resendOtpExpiry', expiry.toString());
+        setResendTimer(60);
+        
         goToStep(4);
       }
     } catch (error) {
@@ -371,7 +436,10 @@ const Register = ({ darkMode }) => {
                   <div className="grid gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-900 dark:text-white">Email Address</label>
-                      <input type="email" value={form.email} onChange={handleFormChange('email')} placeholder="alex@example.com" className={getInputStyle('email')} />
+                      <input type="email" value={form.email} onChange={handleFormChange('email')} placeholder="alex@example.com" className={`w-full rounded-2xl border px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-2 transition ${errors.email || emailStatus === 'taken' ? 'border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-500/10' : emailStatus === 'available' ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : (darkMode ? 'bg-slate-900/60 border-slate-700 text-white placeholder-slate-400 focus:ring-blue-500' : 'bg-white border-slate-200 text-slate-900 focus:ring-blue-500')}`} />
+                      {emailStatus === 'checking' && <p className="text-xs font-bold text-blue-500 mt-1">Checking availability...</p>}
+                      {emailStatus === 'available' && <p className="text-xs font-bold text-emerald-500 mt-1">Email is available!</p>}
+                      {emailStatus === 'taken' && <p className="text-xs font-bold text-red-500 mt-1">Email is already registered.</p>}
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -391,12 +459,36 @@ const Register = ({ darkMode }) => {
                   </div>
                   {!isEditing && (
                     <div className="grid gap-4">
-                      <div className="space-y-2 relative">
+              <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-900 dark:text-white">Password</label>
-                        <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleFormChange('password')} placeholder="Min. 8 characters" className={getInputStyle('password')} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleFormChange('password')} placeholder="Min. 8 characters" className={getInputStyle('password')} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <ul className={`text-xs space-y-1.5 pt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'} font-medium`}>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.length ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.length ? '' : 'opacity-40'}/> At least 8 characters</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.upper ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.upper ? '' : 'opacity-40'}/> At least 1 uppercase letter</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.lower ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.lower ? '' : 'opacity-40'}/> At least 1 lowercase letter</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.number ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.number ? '' : 'opacity-40'}/> At least 1 number</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.special ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.special ? '' : 'opacity-40'}/> At least 1 special character</li>
+                </ul>
+                {form.password && (
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className={`text-[10px] uppercase tracking-wider font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Password Strength</span>
+                      <span className={`text-[10px] uppercase tracking-wider font-black ${strengthLabel === 'Weak' ? 'text-red-500' : strengthLabel === 'Good' ? 'text-amber-500' : 'text-emerald-500'}`}>{strengthLabel}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                      <Motion.div 
+                        className={`h-full ${strengthColor} transition-colors duration-300`} 
+                        initial={{ width: '0%' }}
+                        animate={{ width: strengthWidth }}
+                      />
+                    </div>
+                  </div>
+                )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-900 dark:text-white">Confirm Password</label>

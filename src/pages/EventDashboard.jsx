@@ -446,11 +446,18 @@ const EventDashboard = ({ darkMode }) => {
       <div className={`border rounded-[2rem] p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 ${glassStyle}`}>
         <div className="flex-1 w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            {eventData.category && (
-              <span className="px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase bg-blue-500/20 text-blue-600 dark:text-blue-400 inline-block">
-                {eventData.category}
-              </span>
-            )}
+            <div className="flex gap-2">
+              {eventData.category && (
+                <span className="px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase bg-blue-500/20 text-blue-600 dark:text-blue-400 inline-block">
+                  {eventData.category}
+                </span>
+              )}
+              {eventData.status === 'draft' && (
+                <span className="px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 inline-block">
+                  DRAFT
+                </span>
+              )}
+            </div>
             {userEvents.length > 0 && (
               <select 
                 value={eventId || 'overview'}
@@ -675,11 +682,21 @@ const EventDashboard = ({ darkMode }) => {
                   <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
                     Cancel
                   </button>
-                  <button type="button" onClick={handleDelete} disabled={isSaving || !hasHappened} title={!hasHappened ? "Events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>
+                  <button type="button" onClick={handleDelete} disabled={isSaving || (!hasHappened && editForm?.status !== 'draft')} title={(!hasHappened && editForm?.status !== 'draft') ? "Published events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>
                     Delete
                   </button>
+                  {editForm?.status === 'draft' && (
+                    <button 
+                      type="button" 
+                      disabled={isSaving} 
+                      onClick={(e) => { editForm.status = 'published'; handleEditSubmit(e); }} 
+                      className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 disabled:opacity-50"
+                    >
+                      Publish
+                    </button>
+                  )}
                   <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {isSaving ? 'Saving...' : 'Save'}
                   </button>
                 </div>
               </form>

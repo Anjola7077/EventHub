@@ -209,16 +209,8 @@ const Chat = ({ darkMode }) => {
         if (inputValue) payload.append('text', inputValue);
         if (replyingToMessage) payload.append('replyTo', replyingToMessage._id);
         if (selectedImage) payload.append('image', selectedImage);
-        if (audioBlob) payload.append('audio', audioBlob, 'voicenote.webm');
+          if (audioBlob) payload.append('audio', new File([audioBlob], 'voicenote.webm', { type: 'audio/webm' }));
         if (selectedDocument) payload.append('document', selectedDocument);
-        config = {};
-        payload = {};
-        if (inputValue) payload.text = inputValue;
-        if (replyingToMessage) payload.replyTo = replyingToMessage._id;
-        if (selectedImage) payload.image = selectedImage;
-        if (audioBlob) payload.audio = new File([audioBlob], 'voicenote.webm', { type: 'audio/webm' });
-        if (selectedDocument) payload.document = selectedDocument;
-        config = { headers: { 'Content-Type': 'multipart/form-data' } };
       } else {
         payload = {
           text: inputValue,

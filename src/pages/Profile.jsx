@@ -622,6 +622,11 @@ const Profile = ({ darkMode }) => {
                     <Edit3 size={16} />
                   </button>
                 )}
+                {event.status === 'draft' && (
+                  <div className="absolute top-4 right-14 px-3 py-1.5 bg-amber-500/90 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider text-white border border-white/20 shadow-sm">
+                    DRAFT
+                  </div>
+                )}
                   </div>
               <h3 className={`font-bold text-lg mb-1 truncate leading-tight group-hover:text-blue-500 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>{event.title}</h3>
                   <div className={`text-xs font-semibold opacity-100 flex flex-col gap-1 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
@@ -839,12 +844,22 @@ const Profile = ({ darkMode }) => {
                   <button 
                     type="button" 
                     onClick={handleDeleteEvent} 
-                    disabled={isSaving || !hasHappened} 
-                    title={!hasHappened ? "Events can only be deleted after they have happened" : "Delete Event"}
+                    disabled={isSaving || (!hasHappened && editingEvent?.status !== 'draft')} 
+                    title={(!hasHappened && editingEvent?.status !== 'draft') ? "Published events can only be deleted after they have happened" : "Delete Event"}
                     className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     Delete
                   </button>
+                  {editingEvent?.status === 'draft' && (
+                    <button 
+                      type="button" 
+                      disabled={isSaving} 
+                      onClick={(e) => { editingEvent.status = 'published'; handleEditEventSubmit(e); }} 
+                      className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 disabled:opacity-50"
+                    >
+                      Publish
+                    </button>
+                  )}
                   <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">
                     {isSaving ? 'Saving...' : 'Save Changes'}
                   </button>

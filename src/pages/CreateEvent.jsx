@@ -47,18 +47,11 @@ const CreateEvent = ({ darkMode }) => {
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      setCoverImageFile(file);
-      setCoverImage(objectUrl);
-      setError('');
-    };
-    img.onerror = () => {
-      setError('The selected image file is corrupted or unsupported.');
-      URL.revokeObjectURL(objectUrl);
-    };
-    img.src = objectUrl;
+    // Directly set the file and preview URL without the strict Image validation
+    // This allows formats like HEIC to pass through to Cloudinary
+    setCoverImageFile(file);
+    setCoverImage(URL.createObjectURL(file));
+    setError('');
   };
 
   const handleInputChange = (e) => {

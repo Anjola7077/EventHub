@@ -418,7 +418,7 @@ const Chat = ({ darkMode }) => {
   });
   const isUserApproved = event?.attendees?.some(attendee => {
     const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
-    return attendeeId === (user?._id || user?.id) && attendee.isVerified === true;
+    return attendeeId === (user?._id || user?.id) && attendee.isVerified !== false;
   });
 
   // Only allow access if user is approved, or if they're the organizer/creator

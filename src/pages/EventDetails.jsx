@@ -336,14 +336,15 @@ const EventDetails = ({ darkMode }) => {
   const isSoldOut = event.capacity && (event.ticketsSold || 0) >= event.capacity;
 
   // Check if user has access to chat
-  const isOrganizer = event && (event.organizer === user?._id || event.organizer?._id === user?._id || event.creator === user?._id || event.creator?._id === user?._id);
+  const currentUserId = String(user?._id || user?.id || '');
+  const isOrganizer = event && (String(event.organizer?._id || event.organizer || '') === currentUserId || String(event.creator?._id || event.creator || '') === currentUserId);
   const isApprovedAttendee = event?.attendees?.some(attendee => {
-    const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
-    return attendeeId === (user?._id || user?.id) && attendee.isVerified === true;
+    const attendeeId = String(attendee?.user?._id || attendee?.user || attendee?._id || attendee);
+    return attendeeId === currentUserId && attendee?.isVerified !== false;
   });
   const isRegisteredAttendee = event?.attendees?.some(attendee => {
-    const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
-    return attendeeId === (user?._id || user?.id);
+    const attendeeId = String(attendee?.user?._id || attendee?.user || attendee?._id || attendee);
+    return attendeeId === currentUserId;
   });
   const isRegisteredOrOrganizer = isRegisteredAttendee || isOrganizer;
   const hasChatAccess = isOrganizer || isApprovedAttendee;

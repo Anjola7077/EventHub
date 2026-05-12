@@ -403,22 +403,23 @@ const Chat = ({ darkMode }) => {
 
   const pinnedMessages = messages.filter(m => m.isPinned);
   const activePinnedMessage = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
-  const isOrganizer = event && (event.organizer === user?._id || event.organizer?._id === user?._id || event.creator === user?._id || event.creator?._id === user?._id);
-  const isBanned = event?.bannedUsers?.includes(user?._id || user?.id);
+  const currentUserId = String(user?._id || user?.id || '');
+  const isOrganizer = event && (String(event.organizer?._id || event.organizer || '') === currentUserId || String(event.creator?._id || event.creator || '') === currentUserId);
+  const isBanned = event?.bannedUsers?.some(id => String(id?._id || id) === currentUserId);
   const filteredMentions = mentionSearch !== null 
     ? attendeesForMentions.filter(
-        att => (att.username?.toLowerCase().includes(mentionSearch) || att.fullName.toLowerCase().includes(mentionSearch)) && att._id !== user?._id
+        att => (att.username?.toLowerCase().includes(mentionSearch) || att.fullName.toLowerCase().includes(mentionSearch)) && String(att._id) !== currentUserId
       ) 
     : [];
 
   // Check if user is registered and approved for this event
   const isUserRegistered = event?.attendees?.some(attendee => {
-    const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
-    return attendeeId === (user?._id || user?.id);
+    const attendeeId = String(attendee?.user?._id || attendee?.user || attendee?._id || attendee);
+    return attendeeId === currentUserId;
   });
   const isUserApproved = event?.attendees?.some(attendee => {
-    const attendeeId = attendee.user?._id || attendee.user?.id || attendee._id || attendee.id;
-    return attendeeId === (user?._id || user?.id) && attendee.isVerified !== false;
+    const attendeeId = String(attendee?.user?._id || attendee?.user || attendee?._id || attendee);
+    return attendeeId === currentUserId && attendee?.isVerified !== false;
   });
 
   // Only allow access if user is approved, or if they're the organizer/creator

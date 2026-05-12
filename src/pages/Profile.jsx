@@ -4,6 +4,69 @@ import { MapPin, Globe, CalendarDays, Share2, Edit3, Heart, Plus, Camera, Ticket
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+const LiveEventStatus = ({ event }) => {
+  const [status, setStatus] = useState({ text: '', type: '' });
+
+  useEffect(() => {
+    const updateStatus = () => {
+      const now = new Date().getTime();
+      let startStr = event.date || new Date().toISOString();
+      if (startStr.includes('T')) startStr = startStr.split('T')[0];
+      const start = new Date(`${startStr}T${event.time || '00:00'}`).getTime();
+      
+      let endStr = event.endDate || startStr;
+      if (endStr.includes('T')) endStr = endStr.split('T')[0];
+      const end = new Date(`${endStr}T${event.endTime || '23:59'}`).getTime();
+
+      if (now < start) {
+        const diff = start - now;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        if (days > 0) setStatus({ text: `Starts in ${days}d ${hours}h`, type: 'upcoming' });
+        else if (hours > 0) setStatus({ text: `Starts in ${hours}h ${mins}m`, type: 'upcoming' });
+        else setStatus({ text: `Starts in ${mins}m ${secs}s`, type: 'urgent' });
+        
+        // 15 Minute Warning System Notification
+        const fifteenKey = `notif_15m_${event._id || event.id}`;
+        if (diff <= 15 * 60 * 1000 && diff > 0 && !localStorage.getItem(fifteenKey)) {
+          if (window.Notification?.permission === 'granted') {
+            new window.Notification("Event Starting Soon! ⏱️", { body: `${event.title} begins in 15 minutes!`, icon: event.coverImage || '/logo.png' });
+          }
+          localStorage.setItem(fifteenKey, 'true');
+        }
+      } else if (now >= start && now <= end) {
+        setStatus({ text: 'LIVE 🔴', type: 'ongoing' });
+        
+        // Live System Notification
+        const liveKey = `notif_live_${event._id || event.id}`;
+        if (!localStorage.getItem(liveKey)) {
+          if (now - start < 15 * 60 * 1000 && window.Notification?.permission === 'granted') {
+            new window.Notification("Event is LIVE! 🔴", { body: `${event.title} has officially started!`, icon: event.coverImage || '/logo.png' });
+          }
+          localStorage.setItem(liveKey, 'true');
+        }
+      } else {
+        setStatus({ text: 'ENDED', type: 'ended' });
+      }
+    };
+    
+    updateStatus();
+    const interval = setInterval(updateStatus, 1000);
+    return () => clearInterval(interval);
+  }, [event]);
+
+  if (!status.text) return null;
+
+  const baseClasses = "absolute bottom-3 right-3 px-3 py-1.5 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
+  
+  if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-800/80 text-slate-300 border-slate-600`}>{status.text}</div>;
+  if (status.type === 'ongoing') return <div className={`${baseClasses} bg-red-500/90 text-white border-red-400 animate-pulse`}>{status.text}</div>;
+  if (status.type === 'urgent') return <div className={`${baseClasses} bg-amber-500/90 text-white border-amber-400`}>{status.text}</div>;
+  return <div className={`${baseClasses} bg-emerald-500/90 text-white border-emerald-400`}>{status.text}</div>;
+};
 
 const Profile = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -270,6 +333,10 @@ const Profile = ({ darkMode }) => {
 
   const handleEditEventSubmit = async (e) => {
     e.preventDefault();
+    if (editingEvent.endDate && new Date(editingEvent.endDate) < new Date(editingEvent.date)) {
+      alert("End Date cannot be before Start Date.");
+      return;
+    }
     setIsSaving(true);
     try {
       let payload;
@@ -362,7 +429,7 @@ const Profile = ({ darkMode }) => {
   const totalPages = Math.ceil(displayedEvents.length / itemsPerPage);
   const paginatedEvents = displayedEvents.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const hasHappened = editingEvent?.date ? new Date(editingEvent.date) < new Date() : true;
+  const hasHappened = (editingEvent?.endDate || editingEvent?.date) ? new Date(editingEvent.endDate || editingEvent.date) < new Date() : true;
 
   if (loading || !user) {
     return (
@@ -627,6 +694,7 @@ const Profile = ({ darkMode }) => {
                     <div className="absolute top-3 left-3 px-3 py-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider">
                   {event.category || 'Event'}
                     </div>
+                    <LiveEventStatus event={event} />
                 {activeTab === 'created' && (
                   <button 
                     onClick={(e) => { e.stopPropagation(); setEditingEvent(event); }}

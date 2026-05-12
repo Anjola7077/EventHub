@@ -21,7 +21,7 @@ const CreateEvent = ({ darkMode }) => {
   const [formData, setFormData] = useState(() => {
     const saved = localStorage.getItem('createEventDraft');
     return saved ? JSON.parse(saved) : {
-      title: '', description: '', date: '', time: '',
+      title: '', description: '', date: '', time: '', endDate: '', endTime: '',
       location: '', lat: '', lng: '', price: 0, capacity: '',
     };
   });
@@ -99,6 +99,11 @@ const CreateEvent = ({ darkMode }) => {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setError('Please fill in all required fields highlighted in red.');
+      return;
+    }
+    if (formData.endDate && new Date(formData.endDate) < new Date(formData.date)) {
+      setErrors({ ...newErrors, endDate: true });
+      setError('End Date cannot be set before the Start Date.');
       return;
     }
     setErrors({});
@@ -242,6 +247,14 @@ const CreateEvent = ({ darkMode }) => {
               <div>
                 <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Time</label>
                 <input type="time" name="time" value={formData.time} onChange={handleInputChange} className={getInputStyle('time')} />
+              </div>
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
+                <input type="date" name="endDate" value={formData.endDate || ''} onChange={handleInputChange} className={getInputStyle('endDate')} />
+              </div>
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
+                <input type="time" name="endTime" value={formData.endTime || ''} onChange={handleInputChange} className={getInputStyle('endTime')} />
               </div>
               <div className="md:col-span-2">
                 <div className="flex justify-between items-end mb-2">

@@ -39,6 +39,70 @@ const createClusterCustomIcon = (cluster) => {
   });
 };
 
+const LiveEventStatus = ({ event }) => {
+  const [status, setStatus] = useState({ text: '', type: '' });
+
+  useEffect(() => {
+    const updateStatus = () => {
+      const now = new Date().getTime();
+      let startStr = event.date || new Date().toISOString();
+      if (startStr.includes('T')) startStr = startStr.split('T')[0];
+      const start = new Date(`${startStr}T${event.time || '00:00'}`).getTime();
+      
+      let endStr = event.endDate || startStr;
+      if (endStr.includes('T')) endStr = endStr.split('T')[0];
+      const end = new Date(`${endStr}T${event.endTime || '23:59'}`).getTime();
+
+      if (now < start) {
+        const diff = start - now;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const secs = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        if (days > 0) setStatus({ text: `Starts in ${days}d ${hours}h`, type: 'upcoming' });
+        else if (hours > 0) setStatus({ text: `Starts in ${hours}h ${mins}m`, type: 'upcoming' });
+        else setStatus({ text: `Starts in ${mins}m ${secs}s`, type: 'urgent' });
+        
+        // 15 Minute Warning System Notification
+        const fifteenKey = `notif_15m_${event._id || event.id}`;
+        if (diff <= 15 * 60 * 1000 && diff > 0 && !localStorage.getItem(fifteenKey)) {
+          if (window.Notification?.permission === 'granted') {
+            new window.Notification("Event Starting Soon! ⏱️", { body: `${event.title} begins in 15 minutes!`, icon: event.coverImage || '/logo.png' });
+          }
+          localStorage.setItem(fifteenKey, 'true');
+        }
+      } else if (now >= start && now <= end) {
+        setStatus({ text: 'LIVE 🔴', type: 'ongoing' });
+        
+        // Live System Notification
+        const liveKey = `notif_live_${event._id || event.id}`;
+        if (!localStorage.getItem(liveKey)) {
+          if (now - start < 15 * 60 * 1000 && window.Notification?.permission === 'granted') {
+            new window.Notification("Event is LIVE! 🔴", { body: `${event.title} has officially started!`, icon: event.coverImage || '/logo.png' });
+          }
+          localStorage.setItem(liveKey, 'true');
+        }
+      } else {
+        setStatus({ text: 'ENDED', type: 'ended' });
+      }
+    };
+    
+    updateStatus();
+    const interval = setInterval(updateStatus, 1000);
+    return () => clearInterval(interval);
+  }, [event]);
+
+  if (!status.text) return null;
+
+  const baseClasses = "absolute bottom-4 right-4 px-3 py-1.5 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
+  
+  if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-800/80 text-slate-300 border-slate-600`}>{status.text}</div>;
+  if (status.type === 'ongoing') return <div className={`${baseClasses} bg-red-500/90 text-white border-red-400 animate-pulse`}>{status.text}</div>;
+  if (status.type === 'urgent') return <div className={`${baseClasses} bg-amber-500/90 text-white border-amber-400`}>{status.text}</div>;
+  return <div className={`${baseClasses} bg-emerald-500/90 text-white border-emerald-400`}>{status.text}</div>;
+};
+
 const Events = ({ darkMode, isAuthenticated = true }) => {
   const { user } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState('');
@@ -363,6 +427,7 @@ const Events = ({ darkMode, isAuthenticated = true }) => {
                     >
                     <Heart size={16} className={Array.isArray(event.likes) && event.likes.some(id => String(id?._id || id) === String(user?._id || user?.id)) ? 'fill-current' : ''} />
                     </button>
+                    <LiveEventStatus event={event} />
                   </div>
                   <div className="p-6 flex-1 flex flex-col">
                     <h3 className={`text-lg font-black leading-tight mb-3 group-hover:text-blue-500 transition-colors line-clamp-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>

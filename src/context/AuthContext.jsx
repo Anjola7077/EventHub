@@ -98,6 +98,28 @@ export const AuthProvider = ({ children }) => {
           setToast({ message: data.message, url: data.url });
           setUnreadCount(prev => prev + 1);
           setTimeout(() => setToast(null), 5000);
+
+          // Trigger OS-level System Notification if permitted
+          if (window.Notification?.permission === 'granted') {
+            // Show if the app is in the background, OR if it's an important mention/announcement
+            if (document.visibilityState !== 'visible' || !document.hasFocus() || data.type === 'mention' || data.type === 'system') {
+              const notifOptions = {
+                body: data.message,
+                icon: '/logo.png'
+              };
+              
+              // Group similar notifications using the `tag` property so they overwrite each other instead of spamming
+              if (data.type === 'new_message') notifOptions.tag = 'chat_messages';
+              if (data.type === 'mention') notifOptions.tag = 'chat_mentions';
+              if (data.type === 'system') notifOptions.tag = 'system_alerts';
+
+              const sysNotif = new window.Notification(data.title || 'EventHub Notification', notifOptions);
+              if (data.url) sysNotif.onclick = () => { 
+                window.focus(); 
+                window.location.href = data.url; 
+              };
+            }
+          }
         });
 
         socket.on('connect_error', (error) => {

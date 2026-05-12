@@ -213,6 +213,10 @@ const EventDashboard = ({ darkMode }) => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (editForm.endDate && new Date(editForm.endDate) < new Date(editForm.date)) {
+      alert("End Date cannot be before Start Date.");
+      return;
+    }
     setIsSaving(true);
     try {
       let payload;
@@ -424,7 +428,7 @@ const EventDashboard = ({ darkMode }) => {
 
   const currentAttendees = filteredAttendees.slice(0, visibleCount);
 
-  const hasHappened = eventData?.date ? new Date(eventData.date) < new Date() : true;
+  const hasHappened = (eventData?.endDate || eventData?.date) ? new Date(eventData.endDate || eventData.date) < new Date() : true;
 
   return (
     <Motion.main 

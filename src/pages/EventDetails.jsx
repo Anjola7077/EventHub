@@ -124,6 +124,14 @@ const EventDetails = ({ darkMode }) => {
         setCountdown({ days, hours, minutes, seconds });
       } else {
         setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        
+        const liveKey = `notif_live_${event._id || event.id}`;
+        if (!localStorage.getItem(liveKey)) {
+          if (-distance < 15 * 60 * 1000 && window.Notification?.permission === 'granted') {
+            new window.Notification("Event is LIVE! 🔴", { body: `${event.title} has officially started!`, icon: event.coverImage || '/logo.png' });
+          }
+          localStorage.setItem(liveKey, 'true');
+        }
       }
     };
 
@@ -141,6 +149,10 @@ const EventDetails = ({ darkMode }) => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (editForm.endDate && new Date(editForm.endDate) < new Date(editForm.date)) {
+      showToast("End Date cannot be before Start Date.", "error");
+      return;
+    }
     setIsSaving(true);
     try {
       let payload;
@@ -151,7 +163,7 @@ const EventDetails = ({ darkMode }) => {
 
       if (editingCoverImage) {
         const formData = new FormData();
-        const safeKeys = ['title', 'description', 'date', 'time', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) formData.append(key, dataToSubmit[key]);
         });
@@ -162,7 +174,7 @@ const EventDetails = ({ darkMode }) => {
         payload = formData;
       } else {
         payload = {};
-        const safeKeys = ['title', 'description', 'date', 'time', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) payload[key] = dataToSubmit[key];
         });
@@ -349,7 +361,7 @@ const EventDetails = ({ darkMode }) => {
   const isRegisteredOrOrganizer = isRegisteredAttendee || isOrganizer;
   const hasChatAccess = isOrganizer || isApprovedAttendee;
 
-  const hasHappened = event?.date ? new Date(event.date) < new Date() : true;
+  const hasHappened = (event?.endDate || event?.date) ? new Date(event.endDate || event.date) < new Date() : true;
 
   return (
     <Motion.main
@@ -603,6 +615,16 @@ const EventDetails = ({ darkMode }) => {
                   <div>
                     <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Time</label>
                     <input type="time" value={editForm.time || ''} onChange={e => setEditForm({...editForm, time: e.target.value})} className={inputStyle} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
+                    <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className={inputStyle} />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
+                    <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({...editForm, endTime: e.target.value})} className={inputStyle} />
                   </div>
                 </div>
                 <div>

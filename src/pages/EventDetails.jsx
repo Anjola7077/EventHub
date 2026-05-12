@@ -17,6 +17,39 @@ const animatedMarkerIcon = L.divIcon({
   iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16]
 });
 
+const formatTime12h = (timeStr) => {
+  if (!timeStr) return '';
+  const [hours, minutes] = timeStr.split(':');
+  const h = parseInt(hours, 10);
+  return `${h % 12 || 12}:${minutes || '00'} ${h >= 12 ? 'PM' : 'AM'}`;
+};
+
+const formatEventDateTime = (startDate, startTime, endDate, endTime) => {
+  if (!startDate) return 'Date TBA';
+  
+  const start = new Date(startDate).toLocaleDateString('en-US', { 
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+  });
+  const startT = formatTime12h(startTime);
+  const endT = formatTime12h(endTime);
+  const startFormatted = startT ? `${start} • ${startT}` : start;
+
+  if (!endDate) return startFormatted;
+
+  const end = new Date(endDate).toLocaleDateString('en-US', { 
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+  });
+  
+  if (start === end && !endT) {
+    return startFormatted;
+  } else if (start === end) {
+    return `${start} • ${startT || 'TBA'} - ${endT || 'TBA'}`;
+  } else {
+    const endFormatted = endT ? `${end} • ${endT}` : end;
+    return `${startFormatted}  –  ${endFormatted}`;
+  }
+};
+
 const EventDetails = ({ darkMode }) => {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -213,7 +246,8 @@ const EventDetails = ({ darkMode }) => {
     if (!event) return;
     const startDate = new Date(event.date);
     const startString = startDate.toISOString().replace(/-|:|\.\d\d\d/g, '');
-    const endString = startString; // Basic fallback for an all-day event
+    const endDate = event.endDate ? new Date(event.endDate) : startDate;
+    const endString = endDate.toISOString().replace(/-|:|\.\d\d\d/g, '');
     const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${startString}/${endString}&details=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location?.formattedAddress || event.location || '')}`;
     window.open(googleCalUrl, '_blank');
   };
@@ -224,8 +258,8 @@ const EventDetails = ({ darkMode }) => {
     const formatICSDate = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, '');
     const startString = formatICSDate(startDate);
     
-    // Default to a 1 hour duration if no end time is specified
-    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+    // Use end date or default to a 1 hour duration if no end time is specified
+    const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 60 * 60 * 1000);
     const endString = formatICSDate(endDate);
 
     const icsContent = [
@@ -299,15 +333,6 @@ const EventDetails = ({ darkMode }) => {
     );
   }
 
-  const eventDate = event?.date ? new Date(event.date) : null;
-  const formattedDate = eventDate ? eventDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  let formattedTime = '';
-  if (event?.time) {
-    const [hours, minutes] = event.time.split(':');
-    const h = parseInt(hours, 10);
-    formattedTime = `${h % 12 || 12}:${minutes || '00'} ${h >= 12 ? 'PM' : 'AM'}`;
-  }
-
   const isSoldOut = event.capacity && (event.ticketsSold || 0) >= event.capacity;
 
   // Check if user has access to chat
@@ -378,8 +403,7 @@ const EventDetails = ({ darkMode }) => {
             <div className="max-w-3xl">
               <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight">{event.title}</h1>
               <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-5 text-sm font-semibold text-white/90">
-                <span className="inline-flex items-center gap-2"><Calendar size={16} className="text-white/70" /> {formattedDate}</span>
-                {formattedTime && <span className="inline-flex items-center gap-2"><Clock size={16} className="text-white/70" /> {formattedTime}</span>}
+              <span className="inline-flex items-center gap-2"><Calendar size={16} className="text-white/70" /> {formatEventDateTime(event.date, event.time, event.endDate, event.endTime)}</span>
                 <span className="inline-flex items-center gap-2"><MapPin size={16} className="text-white/70" /> {event.location?.formattedAddress || event.location}</span>
                 <span className="inline-flex items-center gap-2"><Users size={16} className="text-white/70" /> {event.ticketsSold || 0}{event.capacity ? ` / ${event.capacity}` : ''} Attending</span>
               </div>

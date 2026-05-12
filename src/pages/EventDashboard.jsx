@@ -223,18 +223,21 @@ const EventDashboard = ({ darkMode }) => {
 
       if (editingCoverImage) {
         const formData = new FormData();
-        const safeKeys = ['title', 'description', 'date', 'time', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) formData.append(key, dataToSubmit[key]);
         });
         if (dataToSubmit.location) {
           formData.append('location', typeof dataToSubmit.location === 'object' ? JSON.stringify(dataToSubmit.location) : dataToSubmit.location);
         }
+        if (dataToSubmit.ticketTiers) {
+          formData.append('ticketTiers', JSON.stringify(dataToSubmit.ticketTiers));
+        }
         formData.append('coverImage', editingCoverImage);
         payload = formData;
       } else {
         payload = {};
-        const safeKeys = ['title', 'description', 'date', 'time', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'ticketTiers'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) payload[key] = dataToSubmit[key];
         });
@@ -643,7 +646,14 @@ const EventDashboard = ({ darkMode }) => {
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
                 <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 bg-slate-50'}`}>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditingCoverImage(e.target.files[0])} />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file && file.size > 5 * 1024 * 1024) {
+                      alert("Cover image must be less than 5MB.");
+                      return;
+                    }
+                    setEditingCoverImage(file);
+                  }} />
                   <img src={editingCoverImage ? URL.createObjectURL(editingCoverImage) : (editForm.coverImage || '/placeholder.png')} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
                   <div className="relative z-10 bg-black/40 backdrop-blur-sm p-2 rounded-lg inline-block">
                     <ImageIcon size={24} className="text-white mx-auto mb-2" />
@@ -656,12 +666,22 @@ const EventDashboard = ({ darkMode }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Date</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Date</label>
                     <input type="date" value={editForm.date ? editForm.date.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className={inputStyle} required />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Time</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Time</label>
                     <input type="time" value={editForm.time || ''} onChange={e => setEditForm({...editForm, time: e.target.value})} className={inputStyle} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
+                    <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className={inputStyle} />
+                  </div>
+                  <div>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
+                    <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({...editForm, endTime: e.target.value})} className={inputStyle} />
                   </div>
                 </div>
                 <div>

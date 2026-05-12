@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Lock, CheckCircle2, Download } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -6,12 +6,34 @@ import api from '../api/axios';
 
 const EventRegistration = ({ darkMode }) => {
   const { eventId } = useParams();
-  const [form, setForm] = useState({ name: '', email: '', ticket: 'General Admission', agree: false });
-  const [receipt, setReceipt] = useState(null);
+  const [eventData, setEventData] = useState(null);
+  const [form, setForm] = useState({ name: '', email: '', agree: false });
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [receiptFile, setReceiptFile] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const res = await api.get(`/events/${eventId}`);
+        setEventData(res.data.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchEvent();
+  }, [eventId]);
+
+  useEffect(() => {
+    if (eventData?.ticketTiers?.length > 0 && !selectedTier) {
+      setSelectedTier(eventData.ticketTiers[0]);
+    } else if (eventData && !selectedTier) {
+      setSelectedTier({ name: 'General Admission', price: eventData.price || 0 });
+    }
+  }, [eventData, selectedTier]);
 
   const handleChange = (key) => (e) => {
     const value = key === 'agree' ? e.target.checked : e.target.value;
@@ -20,13 +42,19 @@ const EventRegistration = ({ darkMode }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const price = selectedTier ? selectedTier.price : eventData?.price || 0;
+    if (price > 0 && !receiptFile) {
+      return alert("Please upload your payment receipt to continue!");
+    }
+
     if (!form.name || !form.email || !form.agree) return;
     
     setIsLoading(true);
     try {
       const payload = new FormData();
-      payload.append('ticketType', form.ticket);
-      if (receipt) payload.append('receipt', receipt);
+      if (selectedTier) payload.append('ticketType', selectedTier.name);
+      if (receiptFile) payload.append('receipt', receiptFile);
 
       await api.post(`/events/${eventId}/rsvp`, payload);
       setSubmitted(true);
@@ -54,8 +82,6 @@ const EventRegistration = ({ darkMode }) => {
       setIsDownloading(false);
     }
   };
-
-  const ticketPrice = form.ticket === 'VIP Access' ? '₦35,000' : form.ticket === 'Early Bird' ? '₦20,000' : '₦0';
 
   return (
     <Motion.main
@@ -109,28 +135,57 @@ const EventRegistration = ({ darkMode }) => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Ticket Type</label>
-                  <select
-                    value={form.ticket}
-                    onChange={handleChange('ticket')}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
-                  >
-                    <option>General Admission</option>
-                    <option>Early Bird</option>
-                    <option>VIP Access</option>
-                  </select>
+                
+                <div className="space-y-3">
+                  <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Select Ticket Tier</label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {eventData?.ticketTiers?.length > 0 ? (
+                      eventData.ticketTiers.map((tier, idx) => (
+                        <div 
+                          key={idx}
+                          onClick={() => setSelectedTier(tier)}
+                          className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedTier?.name === tier.name ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : darkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}
+                        >
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{tier.name}</span>
+                            <span className="text-blue-600 font-bold">{tier.price === 0 ? 'Free' : `₦${tier.price.toLocaleString()}`}</span>
+                          </div>
+                          {tier.capacity && <div className="text-xs text-slate-500 dark:text-slate-400">{tier.capacity} Tickets Total</div>}
+                        </div>
+                      ))
+                    ) : (
+                      <div onClick={() => setSelectedTier({ name: 'General Admission', price: eventData?.price || 0 })} className="p-4 rounded-2xl border-2 cursor-pointer transition-all border-blue-600 bg-blue-50 dark:bg-blue-900/20">
+                         <div className="flex justify-between items-center mb-1">
+                            <span className={`font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>General Admission</span>
+                            <span className="text-blue-600 font-bold">{!eventData || eventData.price === 0 ? 'Free' : `₦${eventData.price.toLocaleString()}`}</span>
+                          </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Upload Payment Receipt</label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setReceipt(e.target.files[0])}
-                    className={`w-full rounded-2xl border px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'border-slate-700 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50 text-slate-900'}`}
-                  />
-                  <p className="text-xs text-slate-500">Please upload a screenshot of your transfer or payment receipt for verification.</p>
-                </div>
+
+                {((selectedTier && selectedTier.price > 0) || (!selectedTier && eventData?.price > 0)) && (
+                  <div className="space-y-2 mt-6">
+                    <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Upload Payment Receipt</label>
+                    <div className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer relative transition-colors ${darkMode ? 'border-slate-700 bg-slate-900 hover:border-blue-500' : 'border-slate-300 bg-slate-50 hover:border-blue-500'}`}>
+                      <input 
+                        type="file" 
+                        accept="image/*,.pdf" 
+                        onChange={(e) => setReceiptFile(e.target.files[0])} 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                      />
+                      {receiptFile ? (
+                        <p className="text-sm font-bold text-blue-600">{receiptFile.name}</p>
+                      ) : (
+                        <>
+                          <p className={`text-sm font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Tap to upload receipt</p>
+                          <p className="text-xs text-slate-500 mt-1">Image or PDF. Max 5MB.</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Agree to terms</label>
@@ -160,7 +215,7 @@ const EventRegistration = ({ darkMode }) => {
                 <div>
                   <h2 className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>You're registered!</h2>
                   <p className={`mt-3 text-sm ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                    You've successfully registered for this event. A confirmation has been sent to <strong>{form.email}</strong>.
+                    You've successfully registered for <strong>{eventData?.title || 'this event'}</strong>. A confirmation has been sent to <strong>{form.email}</strong>.
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -192,16 +247,17 @@ const EventRegistration = ({ darkMode }) => {
               <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Event summary</h2>
               <div className={`space-y-4 text-sm ${darkMode ? 'text-white' : 'text-slate-600'}`}>
                 <div className={`rounded-2xl p-4 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-                  <div className="font-bold">Event Registration</div>
-                  <div className="mt-2">Standard Entry</div>
+                  <div className="font-bold">{eventData?.title || 'Event Registration'}</div>
+                  <div className="mt-2">{eventData?.date ? new Date(eventData.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'TBA'}</div>
+                  <div className="mt-1">{eventData?.time ? eventData.time : 'TBA'}</div>
                 </div>
                 <div className={`rounded-2xl p-4 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
                   <div className="font-bold">Selected ticket</div>
-                  <div className="mt-2">{form.ticket}</div>
+                  <div className="mt-2">{selectedTier?.name || 'General Admission'}</div>
                 </div>
                 <div className={`rounded-2xl p-4 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
                   <div className="font-bold">Total</div>
-                  <div className="mt-2 text-xl font-black">{ticketPrice}</div>
+                  <div className="mt-2 text-xl font-black">{(!selectedTier?.price && !eventData?.price) ? 'Free' : `₦${(selectedTier?.price || eventData?.price || 0).toLocaleString()}`}</div>
                 </div>
               </div>
             </div>

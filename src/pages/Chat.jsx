@@ -76,8 +76,10 @@ const Chat = ({ darkMode }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyingToMessage, setReplyingToMessage] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
+  const [activeReactionMessage, setActiveReactionMessage] = useState(null);
   const [mentionSearch, setMentionSearch] = useState(null);
   const [error, setError] = useState('');
+  const [attendeesForMentions, setAttendeesForMentions] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -112,6 +114,19 @@ const Chat = ({ darkMode }) => {
           api.get(`/events/${eventId}/messages`)
         ]);
         setEvent(eventRes.data.data);
+
+        if (eventRes.data.data && eventRes.data.data.attendees) {
+            const uniqueAttendees = [];
+            const seenIds = new Set();
+            eventRes.data.data.attendees.forEach(att => {
+                const user = att.user || att;
+                if (user && user._id && !seenIds.has(user._id)) {
+                    uniqueAttendees.push({ _id: user._id, fullName: user.fullName, username: user.username || user.fullName.replace(/\s+/g, '').toLowerCase() });
+                    seenIds.add(user._id);
+                }
+            });
+            setAttendeesForMentions(uniqueAttendees);
+        }
         
         const fetchedMessages = msgRes.data.data.map(m => ({
           ...m,
@@ -173,6 +188,21 @@ const Chat = ({ darkMode }) => {
       }
     });
 
+    socketRef.current.on('messageReaction', ({ messageId, emoji, users }) => {
+      setMessages(prev => prev.map(msg => {
+        if (msg._id === messageId) {
+          let updatedReactions = [...(msg.reactions || [])];
+          const existing = updatedReactions.find(r => r.emoji === emoji);
+          if (existing) {
+            existing.users = users;
+          } else { updatedReactions.push({ emoji, users }); }
+          updatedReactions = updatedReactions.filter(r => r.users.length > 0);
+          return { ...msg, reactions: updatedReactions };
+        }
+        return msg;
+      }));
+    });
+
     return () => socketRef.current?.disconnect();
   }, [eventId, user]);
 
@@ -204,17 +234,34 @@ const Chat = ({ darkMode }) => {
       let payload;
       let config = {};
 
+      const mentions = [];
+      if (inputValue) {
+        const mentionRegex = /@(\w+)/g;
+        let match;
+        while ((match = mentionRegex.exec(inputValue)) !== null) {
+            const username = match[1];
+            const mentionedUser = attendeesForMentions.find(u => u.username === username);
+            if (mentionedUser && !mentions.includes(mentionedUser._id)) {
+                mentions.push(mentionedUser._id);
+            }
+        }
+      }
+
       if (selectedImage || audioBlob || selectedDocument) {
         payload = new FormData();
         if (inputValue) payload.append('text', inputValue);
         if (replyingToMessage) payload.append('replyTo', replyingToMessage._id);
         if (selectedImage) payload.append('image', selectedImage);
-          if (audioBlob) payload.append('audio', new File([audioBlob], 'voicenote.webm', { type: 'audio/webm' }));
+        if (audioBlob) payload.append('audio', new File([audioBlob], 'voicenote.webm', { type: 'audio/webm' }));
         if (selectedDocument) payload.append('document', selectedDocument);
+        if (mentions.length > 0) {
+            payload.append('mentions', JSON.stringify(mentions));
+        }
       } else {
         payload = {
           text: inputValue,
-          replyTo: replyingToMessage ? replyingToMessage._id : null
+          replyTo: replyingToMessage ? replyingToMessage._id : null,
+          mentions: mentions.length > 0 ? mentions : undefined
         };
       }
 
@@ -259,6 +306,13 @@ const Chat = ({ darkMode }) => {
     setReplyingToMessage(null);
   };
 
+  const toggleReaction = (messageId, emoji) => {
+    if (socketRef.current) {
+      socketRef.current.emit('toggleReaction', { eventId, messageId, emoji });
+    }
+    setActiveReactionMessage(null);
+  };
+
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -278,12 +332,19 @@ const Chat = ({ darkMode }) => {
   const handleInputChange = (e) => {
     const val = e.target.value;
     setInputValue(val);
-    
-    const match = val.match(/@([a-zA-Z0-9_]*)$/);
-    if (match) {
-      setMentionSearch(match[1].toLowerCase());
+
+    const lastAt = val.lastIndexOf('@');
+    const lastSpace = val.lastIndexOf(' ');
+
+    if (lastAt > lastSpace && lastAt === val.length - 1) {
+        setMentionSearch('');
+    } else if (lastAt > lastSpace) {
+        const searchTerm = val.substring(lastAt + 1);
+        if (!/\s/.test(searchTerm)) {
+            setMentionSearch(searchTerm.toLowerCase());
+        } else { setMentionSearch(null); }
     } else {
-      setMentionSearch(null);
+        setMentionSearch(null);
     }
 
     if (socketRef.current) {
@@ -344,8 +405,11 @@ const Chat = ({ darkMode }) => {
   const activePinnedMessage = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
   const isOrganizer = event && (event.organizer === user?._id || event.organizer?._id === user?._id || event.creator === user?._id || event.creator?._id === user?._id);
   const isBanned = event?.bannedUsers?.includes(user?._id || user?.id);
-  const uniqueAttendees = event?.attendees ? [...new Set(event.attendees.map(a => a.user?.fullName || a.fullName || 'Anonymous'))].filter(n => n !== 'Anonymous') : [];
-  const filteredMentions = mentionSearch !== null ? uniqueAttendees.filter(name => name.replace(/\s+/g, '').toLowerCase().includes(mentionSearch)) : [];
+  const filteredMentions = mentionSearch !== null 
+    ? attendeesForMentions.filter(
+        att => (att.username?.toLowerCase().includes(mentionSearch) || att.fullName.toLowerCase().includes(mentionSearch)) && att._id !== user?._id
+      ) 
+    : [];
 
   // Check if user is registered and approved for this event
   const isUserRegistered = event?.attendees?.some(attendee => {
@@ -512,7 +576,24 @@ const Chat = ({ darkMode }) => {
                           <Trash2 size={14} />
                         </button>
                       )}
+                    <button onClick={() => setActiveReactionMessage(activeReactionMessage === msg._id ? null : msg._id)} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-100'} shadow-sm transition-colors`} title="Add Reaction">
+                      <Smile size={14} />
+                    </button>
                     </div>
+                  <AnimatePresence>
+                    {activeReactionMessage === msg._id && (
+                      <Motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                        className={`absolute ${msg.isOwn ? 'right-full mr-2' : 'left-full ml-2'} top-0 flex gap-1 p-1.5 rounded-full shadow-lg z-20 ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'}`}
+                      >
+                        {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
+                          <button key={emoji} onClick={() => toggleReaction(msg._id, emoji)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors text-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-100'}`}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </Motion.div>
+                    )}
+                  </AnimatePresence>
                     <div className={`relative px-4 py-2.5 shadow-sm ${
                       msg.isOwn 
                         ? 'bg-blue-600 text-white rounded-[1.5rem] rounded-tr-sm' 
@@ -559,9 +640,16 @@ const Chat = ({ darkMode }) => {
                       )}
                       {msg.text && (
                         <p className="text-sm font-medium leading-relaxed break-words">
-                          {msg.text.split(/(@[a-zA-Z0-9_]+)/g).map((part, i) => 
-                            part.startsWith('@') ? <span key={i} className="text-blue-600 dark:text-blue-400 font-black bg-blue-500/10 px-1 rounded-md">{part}</span> : part
-                          )}
+                          {msg.text.split(/(@\w+)/g).map((part, i) => {
+                            if (part.startsWith('@')) {
+                              const username = part.substring(1);
+                              const isCurrentUserMentioned = msg.mentions?.some(m => m.username === username && m._id === user?._id);
+                              return (
+                                <span key={i} className={`font-black px-1 rounded-md ${isCurrentUserMentioned ? 'bg-amber-500/30 text-amber-600 dark:text-amber-300' : 'text-blue-600 dark:text-blue-400 bg-blue-500/10'}`}>{part}</span>
+                              );
+                            }
+                            return part;
+                          })}
                         </p>
                       )}
                       <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${msg.isOwn ? 'text-blue-200' : `${darkMode ? 'text-slate-400' : 'text-slate-400'}`}`}>
@@ -570,6 +658,23 @@ const Chat = ({ darkMode }) => {
                         {msg.isOwn && (msg.status === 'read' ? <CheckCheck size={12} /> : <Check size={12} />)}
                       </div>
                     </div>
+                  {msg.reactions && msg.reactions.length > 0 && (
+                    <div className={`flex flex-wrap gap-1 mt-1.5 ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
+                      {msg.reactions.map((r, i) => {
+                        const hasReacted = r.users.includes(user?._id || user?.id);
+                        return (
+                          <button 
+                            key={i} 
+                            onClick={() => toggleReaction(msg._id, r.emoji)}
+                            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-colors ${hasReacted ? (darkMode ? 'bg-blue-900/40 border-blue-500/50 text-blue-300' : 'bg-blue-50 border-blue-300 text-blue-700') : (darkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300')}`}
+                          >
+                            <span>{r.emoji}</span>
+                            <span className={hasReacted ? (darkMode ? 'text-blue-300' : 'text-blue-700') : (darkMode ? 'text-slate-400' : 'text-slate-500')}>{r.users.length}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   </div>
                 </Motion.div>
               </React.Fragment>
@@ -715,17 +820,17 @@ const Chat = ({ darkMode }) => {
                   className={`absolute bottom-full left-12 mb-4 p-2 w-64 max-h-48 overflow-y-auto rounded-2xl shadow-2xl border z-50 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
                 >
                   {filteredMentions.map(name => (
-                    <button 
-                      key={name} type="button"
+                    <button
+                      key={name._id} type="button"
                       className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-colors ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-900'}`}
                       onClick={() => {
-                        const formattedName = name.replace(/\s+/g, '');
-                        const newVal = inputValue.replace(/@([a-zA-Z0-9_]*)$/, `@${formattedName} `);
+                        const lastAt = inputValue.lastIndexOf('@');
+                        const newVal = inputValue.substring(0, lastAt) + `@${name.username} `;
                         setInputValue(newVal);
                         setMentionSearch(null);
                       }}
                     >
-                      @{name.replace(/\s+/g, '')} <span className="opacity-50 font-normal ml-1">({name})</span>
+                      @{name.username} <span className="opacity-50 font-normal ml-1">({name.fullName})</span>
                     </button>
                   ))}
                 </Motion.div>

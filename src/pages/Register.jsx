@@ -220,6 +220,10 @@ const Register = ({ darkMode }) => {
     } else if (e.target.type === 'file') {
       const file = e.target.files[0];
       if (file) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          showToast("File size must be less than 5MB.", "error");
+          return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
           setForm((prev) => ({ ...prev, [field]: reader.result })); // Store as Base64 for JSON transmission

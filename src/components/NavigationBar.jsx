@@ -45,7 +45,6 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
   if (user) {
     navItems.push({ id: 'create', label: 'Create', icon: CalendarPlus, path: '/create-event' });
     navItems.push({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' });
-    navItems.push({ id: 'alerts', label: 'Alerts', icon: Bell, path: '/home', badge: unreadCount });
     navItems.push({ id: 'profile', label: 'Profile', icon: User, path: '/profile' });
   } else {
     navItems.push({ id: 'login', label: 'Sign In', icon: LogIn, path: '/login' });

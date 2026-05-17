@@ -32,9 +32,9 @@ const WaveformPlayer = ({ src, isOwn, darkMode }) => {
   const [bars] = useState(() => Array.from({ length: 30 }, () => Math.max(30, Math.random() * 100)));
 
   const togglePlay = () => {
+    if (!audioRef.current) return;
     if (audioRef.current.paused) {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(err => console.error("Audio play error:", err));
     } else {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -50,7 +50,7 @@ const WaveformPlayer = ({ src, isOwn, darkMode }) => {
         {isPlaying ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
       </button>
       <div className="flex-1 h-6 flex items-center gap-[2px] cursor-pointer" onClick={(e) => {
-        if (!audioRef.current || !audioRef.current.duration) return;
+        if (!audioRef.current || isNaN(audioRef.current.duration)) return;
         const rect = e.currentTarget.getBoundingClientRect();
         audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * audioRef.current.duration;
       }}>
@@ -252,7 +252,10 @@ const Chat = ({ darkMode }) => {
         if (inputValue) payload.append('text', inputValue);
         if (replyingToMessage) payload.append('replyTo', replyingToMessage._id);
         if (selectedImage) payload.append('image', selectedImage);
-        if (audioBlob) payload.append('audio', new File([audioBlob], 'voicenote.webm', { type: 'audio/webm' }));
+        if (audioBlob) {
+          const ext = audioBlob.type.includes('mp4') ? 'mp4' : (audioBlob.type.includes('mpeg') ? 'mp3' : 'webm');
+          payload.append('audio', new File([audioBlob], `voicenote.${ext}`, { type: audioBlob.type }));
+        }
         if (selectedDocument) payload.append('document', selectedDocument);
         if (mentions.length > 0) {
             payload.append('mentions', JSON.stringify(mentions));
@@ -306,11 +309,15 @@ const Chat = ({ darkMode }) => {
     setReplyingToMessage(null);
   };
 
-  const toggleReaction = (messageId, emoji) => {
-    if (socketRef.current) {
-      socketRef.current.emit('toggleReaction', { eventId, messageId, emoji });
-    }
+  const toggleReaction = async (messageId, emoji) => {
     setActiveReactionMessage(null);
+    try {
+      await api.post(`/events/${eventId}/messages/${messageId}/reaction`, { emoji });
+    } catch (error) {
+      console.error('Failed to toggle reaction', error);
+      setError('Failed to apply reaction');
+      setTimeout(() => setError(''), 3000);
+    }
   };
 
   const handleImageSelect = (e) => {
@@ -368,8 +375,10 @@ const Chat = ({ darkMode }) => {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
         setAudioBlob(blob);
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
@@ -383,7 +392,6 @@ const Chat = ({ darkMode }) => {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
     }
   };
@@ -563,7 +571,14 @@ const Chat = ({ darkMode }) => {
                         </button>
                       )}
                       {isOrganizer && (
-                        <button onClick={() => { if(socketRef.current) socketRef.current.emit('pinMessage', { eventId, messageId: msg._id }) }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-amber-400 hover:bg-amber-500/20' : 'bg-white text-amber-500 hover:bg-amber-50'} shadow-sm transition-colors`} title={msg.isPinned ? 'Unpin' : 'Pin'}>
+                        <button onClick={async () => { 
+                          try {
+                            await api.put(`/events/${eventId}/messages/${msg._id}/pin`);
+                          } catch (err) {
+                            setError('Failed to pin message');
+                            setTimeout(() => setError(''), 3000);
+                          }
+                        }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-amber-400 hover:bg-amber-500/20' : 'bg-white text-amber-500 hover:bg-amber-50'} shadow-sm transition-colors`} title={msg.isPinned ? 'Unpin' : 'Pin'}>
                           <Pin size={14} className={msg.isPinned ? 'fill-current' : ''} />
                         </button>
                       )}

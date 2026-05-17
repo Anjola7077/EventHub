@@ -33,7 +33,7 @@ const AppContent = () => {
     document.body.style.color = darkMode ? '#f8fafc' : '#0a1f6e';
   }, [darkMode]);
 
-  const isResetRoute = location.pathname.startsWith('/reset-password');
+  const isResetRoute = location.pathname.startsWith('/reset-password') || location.pathname.startsWith('/resetpassword');
 
   return (
     <div className={`min-h-screen w-full transition-colors duration-700 relative overflow-x-hidden ${
@@ -56,6 +56,7 @@ const AppContent = () => {
 
           <Route path="/forgot-password" element={<ForgotPassword darkMode={darkMode} />} />
           <Route path="/reset-password/:token" element={<ResetPassword darkMode={darkMode} />} />
+          <Route path="/resetpassword/:token" element={<ResetPassword darkMode={darkMode} />} />
 
           <Route 
             path="/dashboard" 

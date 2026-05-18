@@ -28,116 +28,59 @@ const WaveformPlayer = ({ src, isOwn, darkMode }) => {
   const [progress, setProgress] = useState(0);
   const audioRef = useRef(null);
 
+  // Generate random heights for the waveform bars
   const [bars] = useState(() => Array.from({ length: 30 }, () => Math.max(30, Math.random() * 100)));
 
-  useEffect(() => {
-    setIsPlaying(false);
-    setProgress(0);
-  }, [src]);
-
   const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) {
-      audio.play()
-        .then(() => setIsPlaying(true))
-        .catch(err => console.error('Audio play error:', err));
+    if (!audioRef.current) return;
+    if (audioRef.current.paused) {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(err => console.error("Audio play error:", err));
     } else {
-      audio.pause();
+      audioRef.current.pause();
       setIsPlaying(false);
     }
   };
 
-  const handleTimeUpdate = () => {
-    const audio = audioRef.current;
-    if (!audio || !audio.duration || isNaN(audio.duration)) return;
-    setProgress((audio.currentTime / audio.duration) * 100);
-  };
-
-  const handleLoadedMetadata = () => {
-    const audio = audioRef.current;
-    if (audio && !isNaN(audio.duration)) {
-      // duration is now available
-    }
-  };
-
-  const handleWaveformClick = (e) => {
-    const audio = audioRef.current;
-    if (!audio || !audio.duration || isNaN(audio.duration)) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
-  };
-
-  const handleEnded = () => {
-    setIsPlaying(false);
-    setProgress(0);
-  };
-
   return (
-    <div className={`flex items-center gap-2 p-2 rounded-2xl mb-2 w-48 sm:w-64 border ${
-      isOwn
-        ? 'bg-blue-700/50 border-blue-500/50'
-        : darkMode
-          ? 'bg-slate-700 border-slate-600'
-          : 'bg-slate-100 border-slate-200'
-    }`}>
+    <div className={`flex items-center gap-2 p-2 rounded-2xl mb-2 w-48 sm:w-64 border ${isOwn ? 'bg-blue-700/50 border-blue-500/50' : darkMode ? 'bg-slate-700 border-slate-600' : 'bg-slate-100 border-slate-200'}`}>
       <button
-        type="button"
-        onClick={togglePlay}
-        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-          isOwn
-            ? 'bg-white text-blue-600 hover:bg-blue-50'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
+        type="button" onClick={togglePlay}
+        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${isOwn ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
       >
-        {isPlaying
-          ? <Square size={12} fill="currentColor" />
-          : <Play size={12} fill="currentColor" className="ml-0.5" />
-        }
+        {isPlaying ? <Square size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" className="ml-0.5" />}
       </button>
-
-      <div
-        className="flex-1 h-6 flex items-center gap-[2px] cursor-pointer"
-        onClick={handleWaveformClick}
-      >
-        {bars.map((height, i) => (
-          <div
-            key={i}
-            className={`flex-1 rounded-full transition-all duration-75 ${
-              (i / 30) * 100 <= progress
-                ? (isOwn ? 'bg-white' : 'bg-blue-600')
-                : (isOwn ? 'bg-white/30' : darkMode ? 'bg-slate-500' : 'bg-slate-300')
-            }`}
-            style={{ height: `${height}%` }}
-          />
-        ))}
+      <div className="flex-1 h-6 flex items-center gap-[2px] cursor-pointer" onClick={(e) => {
+        if (!audioRef.current || isNaN(audioRef.current.duration)) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        audioRef.current.currentTime = ((e.clientX - rect.left) / rect.width) * audioRef.current.duration;
+      }}>
+         {bars.map((height, i) => (
+            <div key={i} className={`flex-1 rounded-full transition-all duration-75 ${(i / 30) * 100 <= progress ? (isOwn ? 'bg-white' : 'bg-blue-600') : (isOwn ? 'bg-white/30' : darkMode ? 'bg-slate-500' : 'bg-slate-300')}`} style={{ height: `${height}%` }} />
+         ))}
       </div>
-
-      <audio
+            <audio
         ref={audioRef}
         src={src}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
         preload="metadata"
+        onLoadedMetadata={(e) => {
+          if (e.target.duration === Infinity || isNaN(e.target.duration)) {
+            e.target.currentTime = 1e101;
+            setTimeout(() => {
+              e.target.currentTime = 0;
+            }, 100);
+          }
+        }}
+        onTimeUpdate={() => {
+          if (audioRef.current && !isNaN(audioRef.current.duration)) {
+            setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+          }
+        }}
+        onEnded={() => { setIsPlaying(false); setProgress(0); }}
         className="hidden"
       />
     </div>
+
   );
-};
-
-const AudioBlobPreview = ({ blob, darkMode }) => {
-  const [url, setUrl] = useState(null);
-
-  useEffect(() => {
-    if (!blob) return;
-    const objectUrl = URL.createObjectURL(blob);
-    setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [blob]);
-
-  if (!url) return null;
-  return <WaveformPlayer src={url} isOwn={false} darkMode={darkMode} />;
 };
 
 const Chat = ({ darkMode }) => {
@@ -170,18 +113,17 @@ const Chat = ({ darkMode }) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const currentUserId = String(user?._id || user?.id || '');
-
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    const socketUrl = api.defaults.baseURL
-      ? api.defaults.baseURL.replace('/api/v1', '')
-      : 'http://localhost:5000';
 
-    socketRef.current = io(socketUrl, { withCredentials: true });
+    const socketUrl = api.defaults.baseURL ? api.defaults.baseURL.replace('/api/v1', '') : 'http://localhost:5000';
+    socketRef.current = io(socketUrl, {
+      withCredentials: true
+    });
+
     socketRef.current.emit('join_event_chat', eventId);
 
     const fetchMessages = async () => {
@@ -193,63 +135,49 @@ const Chat = ({ darkMode }) => {
         ]);
         setEvent(eventRes.data.data);
 
-        if (eventRes.data.data?.attendees) {
-          const uniqueAttendees = [];
-          const seenIds = new Set();
-          eventRes.data.data.attendees.forEach(att => {
-            const u = att.user || att;
-            if (u?._id && !seenIds.has(u._id)) {
-              uniqueAttendees.push({
-                _id: u._id,
-                fullName: u.fullName,
-                username: u.username || u.fullName.replace(/\s+/g, '').toLowerCase()
-              });
-              seenIds.add(u._id);
-            }
-          });
-          setAttendeesForMentions(uniqueAttendees);
+        if (eventRes.data.data && eventRes.data.data.attendees) {
+            const uniqueAttendees = [];
+            const seenIds = new Set();
+            eventRes.data.data.attendees.forEach(att => {
+                const user = att.user || att;
+                if (user && user._id && !seenIds.has(user._id)) {
+                    uniqueAttendees.push({ _id: user._id, fullName: user.fullName, username: user.username || user.fullName.replace(/\s+/g, '').toLowerCase() });
+                    seenIds.add(user._id);
+                }
+            });
+            setAttendeesForMentions(uniqueAttendees);
         }
 
         const fetchedMessages = msgRes.data.data.map(m => ({
           ...m,
-          isOwn: String(m.senderId || m.sender?._id || m.sender || '') === currentUserId
+          isOwn: m.senderId === user?._id || m.senderId === user?.id
         }));
         setMessages(fetchedMessages);
 
-        const unreadMessages = msgRes.data.data.filter(
-          m => String(m.senderId || m.sender?._id || m.sender || '') !== currentUserId && m.status !== 'read'
-        );
-        unreadMessages.forEach(m =>
-          socketRef.current.emit('markAsRead', { messageId: m._id, eventId })
-        );
-      } catch (err) {
-        console.error('Failed to fetch event or messages', err);
+        // Notify the server that we've read any previously unread messages
+        const unreadMessages = msgRes.data.data.filter(m => m.sender !== (user?.fullName || 'You') && m.status !== 'read');
+        unreadMessages.forEach(m => socketRef.current.emit('markAsRead', { messageId: m._id, eventId }));
+      } catch (error) {
+        console.error("Failed to fetch event or messages");
       } finally {
         setIsFetchingMessages(false);
       }
     };
-
     fetchMessages();
 
     socketRef.current.on('receive_message', (newMessage) => {
-      const formattedMsg = {
-        ...newMessage,
-        isOwn: String(newMessage.senderId || '') === currentUserId
-      };
-      setMessages(prev =>
-        prev.some(msg => msg._id === formattedMsg._id)
-          ? prev
-          : [...prev, formattedMsg]
-      );
-      if (String(newMessage.senderId || '') !== currentUserId) {
+      const formattedMsg = { ...newMessage, isOwn: newMessage.senderId === user?._id || newMessage.senderId === user?.id };
+      setMessages(prev => prev.some(msg => msg._id === formattedMsg._id) ? prev : [...prev, formattedMsg]);
+
+      // Automatically mark incoming messages as read
+      if (newMessage.sender !== (user?.fullName || 'You')) {
         socketRef.current.emit('markAsRead', { messageId: newMessage._id, eventId });
       }
     });
 
+
     socketRef.current.on('messageRead', (messageId) => {
-      setMessages(prev =>
-        prev.map(msg => msg._id === messageId ? { ...msg, status: 'read' } : msg)
-      );
+      setMessages(prev => prev.map(msg => msg._id === messageId ? { ...msg, status: 'read' } : msg));
     });
 
     socketRef.current.on('typing', (userName) => {
@@ -266,46 +194,36 @@ const Chat = ({ darkMode }) => {
       setMessages(prev => prev.filter(msg => msg._id !== messageId));
     });
 
-    socketRef.current.on('messageEdited', ({ messageId, text }) => {
-      setMessages(prev =>
-        prev.map(msg => msg._id === messageId ? { ...msg, text, isEdited: true } : msg)
-      );
+    socketRef.current.on('messageEdited', ({ messageId, text, isEdited }) => {
+      setMessages(prev => prev.map(msg => msg._id === messageId ? { ...msg, text, isEdited: isEdited || true } : msg));
     });
 
-    socketRef.current.on('messagePinned', (payload) => {
-      const messageId = payload.messageId || payload._id;
-      const isPinned = typeof payload.isPinned === 'boolean' ? payload.isPinned : true;
-      setMessages(prev =>
-        prev.map(msg => msg._id === messageId ? { ...msg, isPinned } : msg)
-      );
+    socketRef.current.on('messagePinned', ({ messageId, isPinned }) => {
+      setMessages(prev => prev.map(msg => msg._id === messageId ? { ...msg, isPinned } : msg));
     });
 
     socketRef.current.on('userBanned', ({ userId }) => {
-      if (String(userId) === currentUserId) {
+      if (userId === (user?._id || user?.id)) {
         setEvent(prev => ({ ...prev, bannedUsers: [...(prev?.bannedUsers || []), userId] }));
       }
     });
 
     socketRef.current.on('messageReaction', ({ messageId, emoji, users }) => {
-      const normalizedUsers = (users || []).map(u => String(u?._id || u));
-
       setMessages(prev => prev.map(msg => {
-        if (msg._id !== messageId) return msg;
-
-        let updatedReactions = [...(msg.reactions || [])];
-        const existing = updatedReactions.find(r => r.emoji === emoji);
-        if (existing) {
-          existing.users = normalizedUsers;
-        } else {
-          updatedReactions.push({ emoji, users: normalizedUsers });
+        if (msg._id === messageId) {
+          let updatedReactions = [...(msg.reactions || [])];
+          const existing = updatedReactions.find(r => r.emoji === emoji);
+          if (existing) {
+            existing.users = users;
+          } else { updatedReactions.push({ emoji, users }); }
+          updatedReactions = updatedReactions.filter(r => r.users.length > 0);
+          return { ...msg, reactions: updatedReactions };
         }
-        updatedReactions = updatedReactions.filter(r => r.users.length > 0);
-        return { ...msg, reactions: updatedReactions };
+        return msg;
       }));
     });
 
     return () => socketRef.current?.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, user]);
 
   useEffect(() => {
@@ -319,52 +237,49 @@ const Chat = ({ darkMode }) => {
     setIsSending(true);
 
     clearTimeout(typingTimeoutRef.current);
-    if (socketRef.current)
-      socketRef.current.emit('stopTyping', { eventId, userName: user?.fullName || 'Anonymous' });
+    if (socketRef.current) socketRef.current.emit('stopTyping', { eventId, userName: user?.fullName || 'Anonymous' });
 
     if (editingMessage) {
       if (socketRef.current) {
         socketRef.current.emit('editMessage', { eventId, messageId: editingMessage._id, text: inputValue });
       }
-      setMessages(prev =>
-        prev.map(msg => msg._id === editingMessage._id ? { ...msg, text: inputValue, isEdited: true } : msg)
-      );
+      setMessages(prev => prev.map(msg => msg._id === editingMessage._id ? { ...msg, text: inputValue, isEdited: true } : msg));
       setEditingMessage(null);
       setInputValue('');
       setIsSending(false);
       return;
     }
 
-    const blobToSend = audioBlob;
-
     try {
+      let payload;
+      let config = {};
+
       const mentions = [];
       if (inputValue) {
         const mentionRegex = /@(\w+)/g;
         let match;
         while ((match = mentionRegex.exec(inputValue)) !== null) {
-          const username = match[1];
-          const mentionedUser = attendeesForMentions.find(u => u.username === username);
-          if (mentionedUser && !mentions.includes(mentionedUser._id)) {
-            mentions.push(mentionedUser._id);
-          }
+            const username = match[1];
+            const mentionedUser = attendeesForMentions.find(u => u.username === username);
+            if (mentionedUser && !mentions.includes(mentionedUser._id)) {
+                mentions.push(mentionedUser._id);
+            }
         }
       }
 
-      let payload;
-      if (selectedImage || blobToSend || selectedDocument) {
+      if (selectedImage || audioBlob || selectedDocument) {
         payload = new FormData();
         if (inputValue) payload.append('text', inputValue);
         if (replyingToMessage) payload.append('replyTo', replyingToMessage._id);
         if (selectedImage) payload.append('image', selectedImage);
-        if (blobToSend) {
-          const ext = blobToSend.type.includes('mp4')
-            ? 'mp4'
-            : blobToSend.type.includes('mpeg') ? 'mp3' : 'webm';
-          payload.append('audio', new File([blobToSend], `voicenote.${ext}`, { type: blobToSend.type }));
+        if (audioBlob) {
+          const ext = audioBlob.type.includes('mp4') ? 'mp4' : (audioBlob.type.includes('mpeg') ? 'mp3' : 'webm');
+          payload.append('audio', new File([audioBlob], `voicenote.${ext}`, { type: audioBlob.type }));
         }
         if (selectedDocument) payload.append('document', selectedDocument);
-        if (mentions.length > 0) payload.append('mentions', JSON.stringify(mentions));
+        if (mentions.length > 0) {
+            payload.append('mentions', JSON.stringify(mentions));
+        }
       } else {
         payload = {
           text: inputValue,
@@ -373,11 +288,12 @@ const Chat = ({ darkMode }) => {
         };
       }
 
-      const res = await api.post(`/events/${eventId}/messages`, payload);
+      const res = await api.post(`/events/${eventId}/messages`, payload, config);
 
       const newMsg = { ...res.data.data, isOwn: true };
       setMessages(prev => prev.some(msg => msg._id === newMsg._id) ? prev : [...prev, newMsg]);
 
+      // Clear inputs only on success so users don't lose data if it fails!
       setInputValue('');
       setSelectedImage(null);
       setAudioBlob(null);
@@ -387,9 +303,9 @@ const Chat = ({ darkMode }) => {
       setShowAttachMenu(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (documentInputRef.current) documentInputRef.current.value = '';
-    } catch (err) {
-      setError('Failed to send message.');
-      setTimeout(() => setError(''), 3000);
+    } catch (error) {
+      setError("Failed to send message.");
+      setTimeout(() => setError(''), 3000); // Hide error after 3 seconds
     } finally {
       setIsSending(false);
     }
@@ -399,54 +315,70 @@ const Chat = ({ darkMode }) => {
     try {
       await api.delete(`/events/${eventId}/messages/${messageId}`);
       setMessages(prev => prev.filter(msg => msg._id !== messageId));
-    } catch (err) {
-      setError('Failed to delete message.');
+    } catch (error) {
+      setError("Failed to delete message.");
       setTimeout(() => setError(''), 3000);
     }
   };
 
-  const handleReply = (msg) => setReplyingToMessage(msg);
-  const cancelReply = () => setReplyingToMessage(null);
+  const handleReply = (msg) => {
+    setReplyingToMessage(msg);
+  };
 
-  const toggleReaction = async (messageId, emoji) => {
+  const cancelReply = () => {
+    setReplyingToMessage(null);
+  };
+
+    const toggleReaction = async (messageId, emoji) => {
     setActiveReactionMessage(null);
+    const currentUserId = String(user?._id || user?.id);
 
     setMessages(prev => prev.map(msg => {
-      if (msg._id !== messageId) return msg;
-
-      let updatedReactions = [...(msg.reactions || [])];
-      const existing = updatedReactions.find(r => r.emoji === emoji);
-      if (existing) {
-        const alreadyReacted = existing.users.map(u => String(u?._id || u)).includes(currentUserId);
-        if (alreadyReacted) {
-          existing.users = existing.users.filter(u => String(u?._id || u) !== currentUserId);
+      if (msg._id === messageId) {
+        let updatedReactions = [...(msg.reactions || [])];
+        const existing = updatedReactions.find(r => r.emoji === emoji);
+       
+        if (existing) {
+          const userIndex = existing.users.findIndex(u => String(u._id || u) === currentUserId);
+          if (userIndex > -1) {
+            existing.users.splice(userIndex, 1);
+          } else {
+            existing.users.push(currentUserId);
+          }
         } else {
-          existing.users = [...existing.users, currentUserId];
+          updatedReactions.push({ emoji, users: [currentUserId] });
         }
-      } else {
-        updatedReactions.push({ emoji, users: [currentUserId] });
+       
+        updatedReactions = updatedReactions.filter(r => r.users.length > 0);
+        return { ...msg, reactions: updatedReactions };
       }
-      updatedReactions = updatedReactions.filter(r => r.users.length > 0);
-      return { ...msg, reactions: updatedReactions };
+      return msg;
     }));
 
     try {
       await api.post(`/events/${eventId}/messages/${messageId}/reaction`, { emoji });
-    } catch (err) {
-      console.error('Failed to toggle reaction', err);
+    } catch (error) {
+      console.error('Failed to toggle reaction', error);
       setError('Failed to apply reaction');
       setTimeout(() => setError(''), 3000);
     }
   };
 
+
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
-    if (file) { setSelectedImage(file); setShowAttachMenu(false); }
+    if (file) {
+      setSelectedImage(file);
+      setShowAttachMenu(false);
+    }
   };
 
   const handleDocumentSelect = (e) => {
     const file = e.target.files[0];
-    if (file) { setSelectedDocument(file); setShowAttachMenu(false); }
+    if (file) {
+      setSelectedDocument(file);
+      setShowAttachMenu(false);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -457,16 +389,14 @@ const Chat = ({ darkMode }) => {
     const lastSpace = val.lastIndexOf(' ');
 
     if (lastAt > lastSpace && lastAt === val.length - 1) {
-      setMentionSearch('');
+        setMentionSearch('');
     } else if (lastAt > lastSpace) {
-      const searchTerm = val.substring(lastAt + 1);
-      if (!/\s/.test(searchTerm)) {
-        setMentionSearch(searchTerm.toLowerCase());
-      } else {
-        setMentionSearch(null);
-      }
+        const searchTerm = val.substring(lastAt + 1);
+        if (!/\s/.test(searchTerm)) {
+            setMentionSearch(searchTerm.toLowerCase());
+        } else { setMentionSearch(null); }
     } else {
-      setMentionSearch(null);
+        setMentionSearch(null);
     }
 
     if (socketRef.current) {
@@ -489,12 +419,13 @@ const Chat = ({ darkMode }) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
-      mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = () => {
         const mimeType = mediaRecorder.mimeType || 'audio/webm';
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
         setAudioBlob(blob);
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => track.stop());
       };
+
 
       mediaRecorder.start();
       setIsRecording(true);
@@ -518,63 +449,34 @@ const Chat = ({ darkMode }) => {
       el.style.transition = 'background-color 0.5s ease';
       el.style.backgroundColor = darkMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(59, 130, 246, 0.15)';
       el.style.borderRadius = '0.5rem';
-      setTimeout(() => { el.style.backgroundColor = 'transparent'; }, 1500);
-    }
-  };
-
-  const handlePinMessage = async (msg) => {
-    try {
-      const res = await api.put(`/events/${eventId}/messages/${msg._id}/pin`);
-      const updatedMsg = res.data?.data;
-      const newPinState = updatedMsg?.isPinned ?? !msg.isPinned;
-
-      setMessages(prev =>
-        prev.map(m => m._id === msg._id ? { ...m, isPinned: newPinState } : m)
-      );
-
-      if (socketRef.current) {
-        socketRef.current.emit('pinMessage', {
-          eventId,
-          messageId: msg._id,
-          isPinned: newPinState
-        });
-      }
-    } catch (err) {
-      setError('Failed to pin message');
-      setTimeout(() => setError(''), 3000);
+      setTimeout(() => {
+        el.style.backgroundColor = 'transparent';
+      }, 1500);
     }
   };
 
   const pinnedMessages = messages.filter(m => m.isPinned);
   const activePinnedMessage = pinnedMessages.length > 0 ? pinnedMessages[pinnedMessages.length - 1] : null;
-
-  const isOrganizer = event && (
-    String(event.organizer?._id || event.organizer || '') === currentUserId ||
-    String(event.creator?._id || event.creator || '') === currentUserId ||
-    String(event.host?._id || event.host || '') === currentUserId
-  );
-
+  const currentUserId = String(user?._id || user?.id || '');
+  const isOrganizer = event && (String(event.organizer?._id || event.organizer || '') === currentUserId || String(event.creator?._id || event.creator || '') === currentUserId);
   const isBanned = event?.bannedUsers?.some(id => String(id?._id || id) === currentUserId);
-
   const filteredMentions = mentionSearch !== null
     ? attendeesForMentions.filter(
-        att =>
-          (att.username?.toLowerCase().includes(mentionSearch) ||
-            att.fullName.toLowerCase().includes(mentionSearch)) &&
-          String(att._id) !== currentUserId
+        att => (att.username?.toLowerCase().includes(mentionSearch) || att.fullName.toLowerCase().includes(mentionSearch)) && String(att._id) !== currentUserId
       )
     : [];
 
+  // Check if user is registered and approved for this event
   const isUserRegistered = event?.attendees?.some(attendee => {
     const attendeeId = String(attendee?.user?._id || attendee?.user || attendee?._id || attendee);
     return attendeeId === currentUserId;
   });
-
   const isUserApproved = event?.attendees?.some(attendee => {
     const attendeeId = String(attendee?.user?._id || attendee?.user || attendee?._id || attendee);
     return attendeeId === currentUserId && attendee?.isVerified !== false;
   });
 
+  // Only allow access if user is approved, or if they're the organizer/creator
   const hasAccess = isUserApproved || isOrganizer;
 
   if (!hasAccess) {
@@ -599,6 +501,7 @@ const Chat = ({ darkMode }) => {
             </div>
           </div>
         </div>
+
         <div className="flex-1 flex items-center justify-center p-8">
           <div className={`max-w-md w-full text-center p-8 rounded-[2rem] border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} shadow-xl`}>
             <div className={`w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
@@ -628,7 +531,6 @@ const Chat = ({ darkMode }) => {
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className={`fixed inset-0 z-50 flex flex-col pt-20 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}
     >
-      {/* Header */}
       <div className={`px-4 py-3 border-b flex items-center justify-between shadow-sm z-10 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center gap-3">
           <Link to={`/event-details/${eventId}`} className={`p-2 rounded-full transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'}`}>
@@ -649,12 +551,8 @@ const Chat = ({ darkMode }) => {
         </div>
       </div>
 
-      {/* Pinned message banner */}
       {activePinnedMessage && (
-        <div
-          className={`px-4 py-2 border-b flex items-center justify-between shadow-sm z-10 cursor-pointer transition-colors ${darkMode ? 'bg-blue-900/20 border-blue-900/50 hover:bg-blue-900/30' : 'bg-blue-50 border-blue-100 hover:bg-blue-100/70'} backdrop-blur-md`}
-          onClick={() => scrollToMessage(activePinnedMessage._id)}
-        >
+        <div className={`px-4 py-2 border-b flex items-center justify-between shadow-sm z-10 cursor-pointer transition-colors ${darkMode ? 'bg-blue-900/20 border-blue-900/50 hover:bg-blue-900/30' : 'bg-blue-50 border-blue-100 hover:bg-blue-100/70'} backdrop-blur-md`} onClick={() => scrollToMessage(activePinnedMessage._id)}>
           <div className="flex items-center gap-3 overflow-hidden">
             <Pin size={16} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
             <div className="overflow-hidden">
@@ -667,19 +565,14 @@ const Chat = ({ darkMode }) => {
         </div>
       )}
 
-      {/* Error toast */}
       <AnimatePresence>
         {error && (
-          <Motion.div
-            initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg"
-          >
+          <Motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
             {error}
           </Motion.div>
         )}
       </AnimatePresence>
 
-      {/* Messages */}
       {isFetchingMessages ? (
         <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
           {[...Array(6)].map((_, i) => (
@@ -711,93 +604,66 @@ const Chat = ({ darkMode }) => {
                   className={`flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'}`}
                 >
                   <span className={`text-xs font-bold mb-1 ${msg.isOwn ? 'mr-1' : 'ml-1'} ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {msg.isOwn ? 'You' : (msg.senderName || msg.sender)}
+                    {msg.isOwn ? 'You' : msg.sender}
                   </span>
                   <div className={`group relative max-w-[75%] sm:max-w-[60%] flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'}`}>
-                    {/* Action buttons */}
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity px-2 flex gap-2"
-                      style={{ [msg.isOwn ? 'right' : 'left']: '100%' }}
-                    >
-                      <button
-                        onClick={() => handleReply(msg)}
-                        className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-100'} shadow-sm`}
-                      >
+                    <div className="absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity px-2 flex gap-2" style={{ [msg.isOwn ? 'right' : 'left']: '100%' }}>
+                      <button onClick={() => handleReply(msg)} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-100'} shadow-sm`}>
                         <Reply size={14} />
                       </button>
-
                       {isOrganizer && !msg.isOwn && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm('Ban this user from the chat?')) {
-                              socketRef.current?.emit('banUser', { eventId, userId: msg.senderId });
-                            }
-                          }}
-                          className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-red-400 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50'} shadow-sm transition-colors`}
-                          title="Ban User"
-                        >
+                        <button onClick={() => { if(window.confirm('Ban this user from the chat?')) { socketRef.current?.emit('banUser', { eventId, userId: msg.senderId }); } }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-red-400 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50'} shadow-sm transition-colors`} title="Ban User">
                           <Ban size={14} />
                         </button>
                       )}
-
-                      {isOrganizer && (
-                        <button
-                          onClick={() => handlePinMessage(msg)}
-                          className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-amber-400 hover:bg-amber-500/20' : 'bg-white text-amber-500 hover:bg-amber-50'} shadow-sm transition-colors`}
-                          title={msg.isPinned ? 'Unpin' : 'Pin'}
-                        >
+                                          {isOrganizer && (
+                        <button onClick={async () => {
+                          const newPinnedState = !msg.isPinned;
+                          setMessages(prev => prev.map(m =>
+                            m._id === msg._id ? { ...m, isPinned: newPinnedState } : m
+                          ));
+                          try {
+                            await api.put(`/events/${eventId}/messages/${msg._id}/pin`);
+                          } catch (err) {
+                            setMessages(prev => prev.map(m =>
+                              m._id === msg._id ? { ...m, isPinned: !newPinnedState } : m
+                            ));
+                            setError('Failed to pin message');
+                            setTimeout(() => setError(''), 3000);
+                          }
+                        }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-amber-400 hover:bg-amber-500/20' : 'bg-white text-amber-500 hover:bg-amber-50'} shadow-sm transition-colors`} title={msg.isPinned ? 'Unpin' : 'Pin'}>
                           <Pin size={14} className={msg.isPinned ? 'fill-current' : ''} />
                         </button>
                       )}
 
                       {msg.isOwn && (
-                        <button
-                          onClick={() => { setEditingMessage(msg); setInputValue(msg.text || ''); setReplyingToMessage(null); }}
-                          className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-blue-400 hover:bg-blue-500/20' : 'bg-white text-blue-500 hover:bg-blue-50'} shadow-sm transition-colors`}
-                        >
+                        <button onClick={() => { setEditingMessage(msg); setInputValue(msg.text || ''); setReplyingToMessage(null); }} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-blue-400 hover:bg-blue-500/20' : 'bg-white text-blue-500 hover:bg-blue-50'} shadow-sm transition-colors`}>
                           <Edit2 size={14} />
                         </button>
                       )}
-
                       {msg.isOwn && (
-                        <button
-                          onClick={() => handleDeleteMessage(msg._id)}
-                          className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-red-400 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50'} shadow-sm transition-colors`}
-                        >
+                        <button onClick={() => handleDeleteMessage(msg._id)} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-red-400 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50'} shadow-sm transition-colors`}>
                           <Trash2 size={14} />
                         </button>
                       )}
-
-                      <button
-                        onClick={() => setActiveReactionMessage(activeReactionMessage === msg._id ? null : msg._id)}
-                        className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-100'} shadow-sm transition-colors`}
-                        title="Add Reaction"
-                      >
-                        <Smile size={14} />
-                      </button>
+                    <button onClick={() => setActiveReactionMessage(activeReactionMessage === msg._id ? null : msg._id)} className={`p-1.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-slate-500 hover:bg-slate-100'} shadow-sm transition-colors`} title="Add Reaction">
+                      <Smile size={14} />
+                    </button>
                     </div>
-
-                    {/* Reaction picker */}
-                    <AnimatePresence>
-                      {activeReactionMessage === msg._id && (
-                        <Motion.div
-                          initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-                          className={`absolute ${msg.isOwn ? 'right-full mr-2' : 'left-full ml-2'} top-0 flex gap-1 p-1.5 rounded-full shadow-lg z-20 ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'}`}
-                        >
-                          {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
-                            <button
-                              key={emoji}
-                              onClick={() => toggleReaction(msg._id, emoji)}
-                              className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors text-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-100'}`}
-                            >
-                              {emoji}
-                            </button>
-                          ))}
-                        </Motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Bubble */}
+                  <AnimatePresence>
+                    {activeReactionMessage === msg._id && (
+                      <Motion.div
+                        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                        className={`absolute ${msg.isOwn ? 'right-full mr-2' : 'left-full ml-2'} top-0 flex gap-1 p-1.5 rounded-full shadow-lg z-20 ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'}`}
+                      >
+                        {['👍', '❤️', '😂', '😮', '😢', '🔥'].map(emoji => (
+                          <button key={emoji} onClick={() => toggleReaction(msg._id, emoji)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors text-lg ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-slate-100'}`}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </Motion.div>
+                    )}
+                  </AnimatePresence>
                     <div className={`relative px-4 py-2.5 shadow-sm ${
                       msg.isOwn
                         ? 'bg-blue-600 text-white rounded-[1.5rem] rounded-tr-sm'
@@ -808,21 +674,15 @@ const Chat = ({ darkMode }) => {
                           <Pin size={10} className="fill-current" />
                         </div>
                       )}
-
                       {msg.replyTo && (
                         <div
                           onClick={() => scrollToMessage(msg.replyTo._id || msg.replyTo)}
-                          className={`cursor-pointer hover:opacity-80 transition-opacity mb-2 pl-3 border-l-2 text-xs py-1 pr-2 rounded-r-lg ${
-                            msg.isOwn
-                              ? 'border-blue-300 bg-blue-700/50 text-blue-100'
-                              : `${darkMode ? 'border-blue-500 bg-slate-700 text-slate-300' : 'border-blue-500 bg-slate-50 text-slate-600'}`
-                          }`}
+                          className={`cursor-pointer hover:opacity-80 transition-opacity mb-2 pl-3 border-l-2 text-xs py-1 pr-2 rounded-r-lg ${msg.isOwn ? 'border-blue-300 bg-blue-700/50 text-blue-100' : `${darkMode ? 'border-blue-500 bg-slate-700 text-slate-300' : 'border-blue-500 bg-slate-50 text-slate-600'}`}`}
                         >
-                          <div className="font-bold mb-0.5">{msg.replyTo.sender || msg.replyTo.senderName}</div>
+                          <div className="font-bold mb-0.5">{msg.replyTo.sender}</div>
                           <div className="truncate opacity-90">{msg.replyTo.text || 'Photo'}</div>
                         </div>
                       )}
-
                       {(msg.image || msg.imageUrl) && (
                         <img
                           src={msg.image || msg.imageUrl}
@@ -831,99 +691,61 @@ const Chat = ({ darkMode }) => {
                           onClick={() => setLightboxImage(msg.image || msg.imageUrl)}
                         />
                       )}
-
                       {(msg.audio || msg.audioUrl) && (
                         <WaveformPlayer
-                          src={msg.audioUrl || msg.audio}
+                          src={msg.audio || msg.audioUrl}
                           isOwn={msg.isOwn}
                           darkMode={darkMode}
                         />
                       )}
-
                       {(msg.document || msg.documentUrl) && (
                         <a
-                          href={msg.document || msg.documentUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`flex items-center gap-3 p-3 mb-2 rounded-xl border ${
-                            msg.isOwn
-                              ? 'bg-blue-700/50 border-blue-500 text-white hover:bg-blue-800'
-                              : darkMode
-                                ? 'bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600'
-                                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                          } transition-colors cursor-pointer`}
+                          href={msg.document || msg.documentUrl} target="_blank" rel="noopener noreferrer"
+                          className={`flex items-center gap-3 p-3 mb-2 rounded-xl border ${msg.isOwn ? 'bg-blue-700/50 border-blue-500 text-white hover:bg-blue-800' : darkMode ? 'bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'} transition-colors cursor-pointer`}
                         >
-                          <FileText size={24} className={msg.isOwn ? 'text-blue-200' : 'text-blue-500'} />
-                          <span className="text-sm font-bold truncate max-w-[150px] sm:max-w-[200px]">
-                            {msg.documentName || 'Document'}
-                          </span>
-                          <Download size={16} className={`ml-auto flex-shrink-0 ${msg.isOwn ? 'text-blue-200' : 'text-slate-400'}`} />
+                          <FileText size={24} className={msg.isOwn ? "text-blue-200" : "text-blue-500"} />
+                          <span className="text-sm font-bold truncate max-w-[150px] sm:max-w-[200px]">{msg.documentName || 'Document'}</span>
+                          <Download size={16} className={`ml-auto flex-shrink-0 ${msg.isOwn ? "text-blue-200" : "text-slate-400"}`} />
                         </a>
                       )}
-
                       {msg.text && (
                         <p className="text-sm font-medium leading-relaxed break-words">
                           {msg.text.split(/(@\w+)/g).map((part, i) => {
                             if (part.startsWith('@')) {
                               const username = part.substring(1);
-                              const isCurrentUserMentioned = msg.mentions?.some(
-                                m => m.username === username || String(m._id || m) === currentUserId
-                              );
+                              const isCurrentUserMentioned = msg.mentions?.some(m => m.username === username && m._id === user?._id);
                               return (
-                                <span
-                                  key={i}
-                                  className={`font-black px-1 rounded-md ${
-                                    isCurrentUserMentioned
-                                      ? 'bg-amber-500/30 text-amber-600 dark:text-amber-300'
-                                      : 'text-blue-600 dark:text-blue-400 bg-blue-500/10'
-                                  }`}
-                                >
-                                  {part}
-                                </span>
+                                <span key={i} className={`font-black px-1 rounded-md ${isCurrentUserMentioned ? 'bg-amber-500/30 text-amber-600 dark:text-amber-300' : 'text-blue-600 dark:text-blue-400 bg-blue-500/10'}`}>{part}</span>
                               );
                             }
                             return part;
                           })}
                         </p>
                       )}
-
                       <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] ${msg.isOwn ? 'text-blue-200' : `${darkMode ? 'text-slate-400' : 'text-slate-400'}`}`}>
                         {msg.isEdited && <span className="italic opacity-80 mr-1">(edited)</span>}
-                        <span>{msg.time || new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{msg.time}</span>
                         {msg.isOwn && (msg.status === 'read' ? <CheckCheck size={12} /> : <Check size={12} />)}
                       </div>
                     </div>
+                  {msg.reactions && msg.reactions.length > 0 && (
+                    <div className={`flex flex-wrap gap-1 mt-1.5 ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
+                      {msg.reactions.map((r, i) => {
+                                                const hasReacted = r.users.some(u => String(u._id || u) === String(user?._id || user?.id));
 
-                    {/* Reaction pills */}
-                    {msg.reactions && msg.reactions.length > 0 && (
-                      <div className={`flex flex-wrap gap-1 mt-1.5 ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
-                        {msg.reactions.map((r, i) => {
-                          const hasReacted = r.users
-                            .map(u => String(u?._id || u))
-                            .includes(currentUserId);
-                          return (
-                            <button
-                              key={i}
-                              onClick={() => toggleReaction(msg._id, r.emoji)}
-                              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-colors ${
-                                hasReacted
-                                  ? darkMode
-                                    ? 'bg-blue-900/40 border-blue-500/50 text-blue-300'
-                                    : 'bg-blue-50 border-blue-300 text-blue-700'
-                                  : darkMode
-                                    ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
-                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                              }`}
-                            >
-                              <span>{r.emoji}</span>
-                              <span className={hasReacted ? (darkMode ? 'text-blue-300' : 'text-blue-700') : (darkMode ? 'text-slate-400' : 'text-slate-500')}>
-                                {r.users.length}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => toggleReaction(msg._id, r.emoji)}
+                            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border transition-colors ${hasReacted ? (darkMode ? 'bg-blue-900/40 border-blue-500/50 text-blue-300' : 'bg-blue-50 border-blue-300 text-blue-700') : (darkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300')}`}
+                          >
+                            <span>{r.emoji}</span>
+                            <span className={hasReacted ? (darkMode ? 'text-blue-300' : 'text-blue-700') : (darkMode ? 'text-slate-400' : 'text-slate-500')}>{r.users.length}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   </div>
                 </Motion.div>
               </React.Fragment>
@@ -949,7 +771,6 @@ const Chat = ({ darkMode }) => {
         </div>
       )}
 
-      {/* Input bar */}
       <div className={`fixed bottom-0 left-0 right-0 p-3 sm:p-4 border-t shadow-[0_-10px_40px_rgba(0,0,0,0.05)] ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} backdrop-blur-xl`}>
         <div className="max-w-4xl mx-auto">
           {isBanned ? (
@@ -958,194 +779,187 @@ const Chat = ({ darkMode }) => {
             </div>
           ) : (
             <>
-              <AnimatePresence>
-                {editingMessage && (
-                  <Motion.div
-                    initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
-                    className={`flex items-start justify-between p-3 mb-2 rounded-xl border-l-4 border-emerald-500 ${darkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}
-                  >
-                    <div className="flex gap-2 overflow-hidden">
-                      <Edit2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
-                      <div className="overflow-hidden">
-                        <p className="text-xs font-black text-emerald-500 mb-0.5">Editing Message</p>
-                        <p className="text-xs truncate opacity-80">{editingMessage.text || 'Photo'}</p>
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => { setEditingMessage(null); setInputValue(''); }} className={`p-1 rounded-full ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-500'}`}>
-                      <X size={16} />
-                    </button>
-                  </Motion.div>
-                )}
-
-                {replyingToMessage && (
-                  <Motion.div
-                    initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
-                    className={`flex items-start justify-between p-3 mb-2 rounded-xl border-l-4 border-blue-500 ${darkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}
-                  >
-                    <div className="flex gap-2 overflow-hidden">
-                      <CornerDownRight size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
-                      <div className="overflow-hidden">
-                        <p className="text-xs font-black text-blue-500 mb-0.5">Replying to {replyingToMessage.senderName || replyingToMessage.sender}</p>
-                        <p className="text-xs truncate opacity-80">{replyingToMessage.text || 'Photo'}</p>
-                      </div>
-                    </div>
-                    <button onClick={cancelReply} className={`p-1 rounded-full ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-500'}`}>
-                      <X size={16} />
-                    </button>
-                  </Motion.div>
-                )}
-
-                {selectedImage && (
-                  <Motion.div
-                    initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
-                    className={`relative inline-block mb-2 p-2 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <img src={URL.createObjectURL(selectedImage)} alt="Preview" className="h-20 w-auto rounded-lg object-cover shadow-sm" />
-                    <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors">
-                      <X size={12} />
-                    </button>
-                  </Motion.div>
-                )}
-
-                {audioBlob && (
-                  <Motion.div
-                    initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
-                    className={`relative inline-block mb-2 p-2 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <AudioBlobPreview blob={audioBlob} darkMode={darkMode} />
-                    <button type="button" onClick={() => setAudioBlob(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors z-10">
-                      <X size={12} />
-                    </button>
-                  </Motion.div>
-                )}
-
-                {selectedDocument && (
-                  <Motion.div
-                    initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
-                    className={`relative inline-block mb-2 p-3 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <div className="flex items-center gap-3 pr-4">
-                      <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center"><FileText size={20} /></div>
-                      <span className={`text-sm font-bold truncate max-w-[150px] ${darkMode ? 'text-white' : 'text-slate-900'}`}>{selectedDocument.name}</span>
-                    </div>
-                    <button type="button" onClick={() => setSelectedDocument(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors">
-                      <X size={12} />
-                    </button>
-                  </Motion.div>
-                )}
-              </AnimatePresence>
-
-              <form onSubmit={handleSend} className="flex items-end gap-2 relative">
-                <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageSelect} />
-                <input type="file" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv" className="hidden" ref={documentInputRef} onChange={handleDocumentSelect} />
-
-                <AnimatePresence>
-                  {showAttachMenu && (
-                    <Motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                      className={`absolute bottom-full left-0 mb-4 p-2 rounded-2xl shadow-xl flex gap-2 border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
-                    >
-                      <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-3 rounded-xl flex flex-col items-center gap-1 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
-                        <div className="w-10 h-10 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center"><ImageIcon size={20} /></div>
-                        <span className="text-[10px] font-bold">Photo</span>
-                      </button>
-                      <button type="button" onClick={() => documentInputRef.current?.click()} className={`p-3 rounded-xl flex flex-col items-center gap-1 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
-                        <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><Paperclip size={20} /></div>
-                        <span className="text-[10px] font-bold">File</span>
-                      </button>
-                    </Motion.div>
-                  )}
-
-                  {mentionSearch !== null && filteredMentions.length > 0 && (
-                    <Motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                      className={`absolute bottom-full left-12 mb-4 p-2 w-64 max-h-48 overflow-y-auto rounded-2xl shadow-2xl border z-50 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
-                    >
-                      {filteredMentions.map(name => (
-                        <button
-                          key={name._id} type="button"
-                          className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-colors ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-900'}`}
-                          onClick={() => {
-                            const lastAt = inputValue.lastIndexOf('@');
-                            const newVal = inputValue.substring(0, lastAt) + `@${name.username} `;
-                            setInputValue(newVal);
-                            setMentionSearch(null);
-                          }}
-                        >
-                          @{name.username} <span className="opacity-50 font-normal ml-1">({name.fullName})</span>
-                        </button>
-                      ))}
-                    </Motion.div>
-                  )}
-
-                  {showEmojiPicker && (
-                    <Motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                      className="absolute bottom-full right-0 mb-4 z-50 shadow-2xl rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-700"
-                    >
-                      <Picker
-                        data={data}
-                        onEmojiSelect={(emoji) => setInputValue(prev => prev + emoji.native)}
-                        theme={darkMode ? 'dark' : 'light'}
-                      />
-                    </Motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className={`flex-1 flex items-end rounded-[1.5rem] border overflow-hidden transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 focus-within:border-slate-500' : 'bg-slate-50 border-slate-200 focus-within:border-blue-300'}`}>
-                  <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} className={`p-3.5 outline-none ${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}>
-                    <Paperclip size={20} />
-                  </button>
-                  <textarea
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isSending) handleSend(e); } }}
-                    placeholder="Type a message..."
-                    rows={1}
-                    className={`flex-1 max-h-32 min-h-[48px] py-3.5 bg-transparent border-none focus:ring-0 resize-none text-sm font-medium outline-none ${darkMode ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className={`p-3.5 outline-none transition-colors ${showEmojiPicker ? 'text-blue-500' : darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}
-                  >
-                    <Smile size={20} />
-                  </button>
+          <AnimatePresence>
+            {editingMessage && (
+              <Motion.div
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`flex items-start justify-between p-3 mb-2 rounded-xl border-l-4 border-emerald-500 ${darkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}
+              >
+                <div className="flex gap-2 overflow-hidden">
+                  <Edit2 size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-black text-emerald-500 mb-0.5">Editing Message</p>
+                    <p className="text-xs truncate opacity-80">{editingMessage.text || 'Photo'}</p>
+                  </div>
                 </div>
+                <button type="button" onClick={() => { setEditingMessage(null); setInputValue(''); }} className={`p-1 rounded-full ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-500'}`}>
+                  <X size={16} />
+                </button>
+              </Motion.div>
+            )}
+            {replyingToMessage && (
+              <Motion.div
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`flex items-start justify-between p-3 mb-2 rounded-xl border-l-4 border-blue-500 ${darkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-900'}`}
+              >
+                <div className="flex gap-2 overflow-hidden">
+                  <CornerDownRight size={16} className="text-blue-500 mt-0.5 flex-shrink-0" />
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-black text-blue-500 mb-0.5">Replying to {replyingToMessage.sender}</p>
+                    <p className="text-xs truncate opacity-80">{replyingToMessage.text || 'Photo'}</p>
+                  </div>
+                </div>
+                <button onClick={cancelReply} className={`p-1 rounded-full ${darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-500'}`}>
+                  <X size={16} />
+                </button>
+              </Motion.div>
+            )}
 
-                {(inputValue.trim() || selectedImage || audioBlob || selectedDocument || isSending) ? (
-                  <Motion.button
-                    initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                    type="submit" disabled={isSending}
-                    className="w-[48px] h-[48px] rounded-[1.2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 hover:bg-blue-700 flex-shrink-0 disabled:opacity-80 transition-all"
-                  >
-                    {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-1" />}
-                  </Motion.button>
-                ) : (
-                  <Motion.button
-                    initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                    type="button"
-                    onClick={isRecording ? stopRecording : startRecording}
-                    className={`w-[48px] h-[48px] rounded-[1.2rem] flex items-center justify-center shadow-sm flex-shrink-0 transition-colors ${
-                      isRecording
-                        ? 'bg-red-500 text-white shadow-red-500/30 animate-pulse'
-                        : `${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`
-                    }`}
-                  >
-                    {isRecording ? <Square size={16} fill="currentColor" /> : <Mic size={20} />}
-                  </Motion.button>
-                )}
-              </form>
+            {selectedImage && (
+              <Motion.div
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`relative inline-block mb-2 p-2 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <img src={URL.createObjectURL(selectedImage)} alt="Preview" className="h-20 w-auto rounded-lg object-cover shadow-sm" />
+                <button type="button" onClick={() => setSelectedImage(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors">
+                  <X size={12} />
+                </button>
+              </Motion.div>
+            )}
+
+            {audioBlob && (
+              <Motion.div
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`relative inline-block mb-2 p-2 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <WaveformPlayer src={URL.createObjectURL(audioBlob)} isOwn={false} darkMode={darkMode} />
+                <button type="button" onClick={() => setAudioBlob(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors z-10">
+                  <X size={12} />
+                </button>
+              </Motion.div>
+            )}
+
+            {selectedDocument && (
+              <Motion.div
+                initial={{ opacity: 0, height: 0, y: 10 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: 10 }}
+                className={`relative inline-block mb-2 p-3 rounded-xl border w-max ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}
+              >
+                <div className="flex items-center gap-3 pr-4">
+                  <div className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-lg flex items-center justify-center"><FileText size={20} /></div>
+                  <span className={`text-sm font-bold truncate max-w-[150px] ${darkMode ? 'text-white' : 'text-slate-900'}`}>{selectedDocument.name}</span>
+                </div>
+                <button type="button" onClick={() => setSelectedDocument(null)} className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md transition-colors">
+                  <X size={12} />
+                </button>
+              </Motion.div>
+            )}
+          </AnimatePresence>
+          <form onSubmit={handleSend} className="flex items-end gap-2 relative">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleImageSelect}
+            />
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.csv"
+              className="hidden"
+              ref={documentInputRef}
+              onChange={handleDocumentSelect}
+            />
+            <AnimatePresence>
+              {showAttachMenu && (
+                <Motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className={`absolute bottom-full left-0 mb-4 p-2 rounded-2xl shadow-xl flex gap-2 border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                >
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-3 rounded-xl flex flex-col items-center gap-1 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
+                    <div className="w-10 h-10 rounded-full bg-purple-500/10 text-purple-500 flex items-center justify-center"><ImageIcon size={20} /></div>
+                    <span className="text-[10px] font-bold">Photo</span>
+                  </button>
+                  <button type="button" onClick={() => documentInputRef.current?.click()} className={`p-3 rounded-xl flex flex-col items-center gap-1 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-700'}`}>
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><Paperclip size={20} /></div>
+                    <span className="text-[10px] font-bold">File</span>
+                  </button>
+                </Motion.div>
+              )}
+              {mentionSearch !== null && filteredMentions.length > 0 && (
+                <Motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className={`absolute bottom-full left-12 mb-4 p-2 w-64 max-h-48 overflow-y-auto rounded-2xl shadow-2xl border z-50 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
+                >
+                  {filteredMentions.map(name => (
+                    <button
+                      key={name._id} type="button"
+                      className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold transition-colors ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-900'}`}
+                      onClick={() => {
+                        const lastAt = inputValue.lastIndexOf('@');
+                        const newVal = inputValue.substring(0, lastAt) + `@${name.username} `;
+                        setInputValue(newVal);
+                        setMentionSearch(null);
+                      }}
+                    >
+                      @{name.username} <span className="opacity-50 font-normal ml-1">({name.fullName})</span>
+                    </button>
+                  ))}
+                </Motion.div>
+              )}
+              {showEmojiPicker && (
+                <Motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className="absolute bottom-full right-0 mb-4 z-50 shadow-2xl rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-700"
+                >
+                  <Picker data={data} onEmojiSelect={(emoji) => setInputValue(prev => prev + emoji.native)} theme={darkMode ? 'dark' : 'light'} />
+                </Motion.div>
+              )}
+            </AnimatePresence>
+            <div className={`flex-1 flex items-end rounded-[1.5rem] border overflow-hidden transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 focus-within:border-slate-500' : 'bg-slate-50 border-slate-200 focus-within:border-blue-300'}`}>
+              <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} className={`p-3.5 outline-none ${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}>
+                <Paperclip size={20} />
+              </button>
+              <textarea
+                value={inputValue} onChange={handleInputChange}
+                onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if(!isSending) handleSend(e); } }}
+                placeholder="Type a message..." rows={1}
+                className={`flex-1 max-h-32 min-h-[48px] py-3.5 bg-transparent border-none focus:ring-0 resize-none text-sm font-medium outline-none ${darkMode ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
+              />
+              <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className={`p-3.5 outline-none transition-colors ${showEmojiPicker ? 'text-blue-500' : darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}>
+                <Smile size={20} />
+              </button>
+            </div>
+            {(inputValue.trim() || selectedImage || audioBlob || selectedDocument || isSending) ? (
+              <Motion.button
+                initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                type="submit" disabled={isSending}
+                className="w-[48px] h-[48px] rounded-[1.2rem] bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 hover:bg-blue-700 flex-shrink-0 disabled:opacity-80 transition-all"
+              >
+                {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-1" />}
+              </Motion.button>
+            ) : (
+              <Motion.button
+                initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`w-[48px] h-[48px] rounded-[1.2rem] flex items-center justify-center shadow-sm flex-shrink-0 transition-colors ${isRecording ? 'bg-red-500 text-white shadow-red-500/30 animate-pulse' : `${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}`}
+              >
+                {isRecording ? <Square size={16} fill="currentColor" /> : <Mic size={20} />}
+              </Motion.button>
+            )}
+          </form>
             </>
           )}
         </div>
       </div>
 
-      {/* Lightbox */}
+      {/* Image Lightbox Overlay */}
       <AnimatePresence>
         {lightboxImage && (
           <Motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 sm:p-8 cursor-zoom-out"
             onClick={() => setLightboxImage(null)}
           >
@@ -1170,3 +984,6 @@ const Chat = ({ darkMode }) => {
 };
 
 export default Chat;
+
+
+

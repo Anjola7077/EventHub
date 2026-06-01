@@ -120,8 +120,28 @@ const Chat = ({ darkMode }) => {
   useEffect(() => {
 
     const socketUrl = api.defaults.baseURL ? api.defaults.baseURL.replace('/api/v1', '') : 'http://localhost:5000';
+    
+    // Get the token from localStorage or fallback to cookies
+    const getToken = () => {
+      const localToken = localStorage.getItem('token');
+      if (localToken) return localToken;
+      
+      const cookies = document.cookie.split(';');
+      const tokenCookie = cookies.find(c => c.trim().startsWith('token='));
+      return tokenCookie ? tokenCookie.split('=')[1] : null;
+    };
+
+    const token = getToken();
+
     socketRef.current = io(socketUrl, {
-      withCredentials: true
+      withCredentials: true,
+      auth: {
+        token: token
+      },
+      timeout: 5000,
+      reconnection: true,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 1000
     });
 
     socketRef.current.emit('join_event_chat', eventId);
@@ -221,6 +241,10 @@ const Chat = ({ darkMode }) => {
         }
         return msg;
       }));
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error.message);
     });
 
     return () => socketRef.current?.disconnect();
@@ -333,6 +357,7 @@ const Chat = ({ darkMode }) => {
     setActiveReactionMessage(null);
     const currentUserId = String(user?._id || user?.id);
 
+    // Optimistic update
     setMessages(prev => prev.map(msg => {
       if (msg._id === messageId) {
         let updatedReactions = [...(msg.reactions || [])];
@@ -354,6 +379,11 @@ const Chat = ({ darkMode }) => {
       }
       return msg;
     }));
+
+    // Send to backend via Socket.IO for real-time broadcast
+    if (socketRef.current) {
+      socketRef.current.emit('toggleReaction', { messageId, eventId, emoji });
+    }
 
     try {
       await api.post(`/events/${eventId}/messages/${messageId}/reaction`, { emoji });
@@ -618,6 +648,12 @@ const Chat = ({ darkMode }) => {
                       )}
                                           {isOrganizer && (
                         <button onClick={async () => {
+                          
+                          // Emit Socket.IO event for real-time broadcast
+                          if (socketRef.current) {
+                            socketRef.current.emit("pinMessage", { messageId: msg._id, eventId });
+                          }
+
                           const newPinnedState = !msg.isPinned;
                           setMessages(prev => prev.map(m =>
                             m._id === msg._id ? { ...m, isPinned: newPinnedState } : m
@@ -984,6 +1020,3 @@ const Chat = ({ darkMode }) => {
 };
 
 export default Chat;
-
-
-

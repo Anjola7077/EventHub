@@ -65,7 +65,7 @@ const EventDetails = ({ darkMode }) => {
   const [editingCoverImage, setEditingCoverImage] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showEventDeleteConfirm, setShowEventDeleteConfirm] = useState(false);
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'upcoming' });
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -112,8 +112,9 @@ const EventDetails = ({ darkMode }) => {
 
     const updateCountdown = () => {
       const now = new Date().getTime();
-      const eventTime = new Date(event.date).getTime();
-      const distance = eventTime - now;
+      const startTime = new Date(event.date).getTime();
+      const endTime = event.endDate ? new Date(event.endDate).getTime() : (startTime + 3600000);
+      const distance = startTime - now;
 
       if (distance > 0) {
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
@@ -121,17 +122,19 @@ const EventDetails = ({ darkMode }) => {
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        setCountdown({ days, hours, minutes, seconds });
-      } else {
-        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        
+        setCountdown({ days, hours, minutes, seconds, status: 'upcoming' });
+      } else if (now <= endTime) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'live' });
+
         const liveKey = `notif_live_${event._id || event.id}`;
         if (!localStorage.getItem(liveKey)) {
-          if (-distance < 15 * 60 * 1000 && window.Notification?.permission === 'granted') {
-            new window.Notification("Event is LIVE! 🔴", { body: `${event.title} has officially started!`, icon: event.coverImage || '/logo.png' });
+          if (window.Notification?.permission === 'granted') {
+            new window.Notification("Event is LIVE!", { body: `${event.title} has officially started!`, icon: event.coverImage || '/logo.png' });
           }
           localStorage.setItem(liveKey, 'true');
         }
+      } else {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'ended' });
       }
     };
 
@@ -139,7 +142,7 @@ const EventDetails = ({ darkMode }) => {
     const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
-  }, [event?.date]);
+  }, [event?.date, event?.endDate]);
 
   const glassStyle = darkMode
     ? 'bg-slate-800 border-slate-700'
@@ -415,6 +418,16 @@ const EventDetails = ({ darkMode }) => {
             </div>
             <div className="max-w-3xl">
               <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight">{event.title}</h1>
+              {countdown.status === 'ended' && (
+                <span className="inline-flex items-center gap-1.5 mt-3 rounded-full bg-slate-500/30 border border-slate-400/40 px-4 py-1.5 text-xs font-bold text-slate-200">
+                  <Clock size={12} /> Ended
+                </span>
+              )}
+              {countdown.status === 'live' && (
+                <span className="inline-flex items-center gap-1.5 mt-3 rounded-full bg-green-500/30 border border-green-400/40 px-4 py-1.5 text-xs font-bold text-green-200">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> LIVE
+                </span>
+              )}
               <div className="mt-6 flex flex-col sm:flex-row sm:flex-wrap gap-5 text-sm font-semibold text-white/90">
               <span className="inline-flex items-center gap-2"><Calendar size={16} className="text-white/70" /> {formatEventDateTime(event.date, event.time, event.endDate, event.endTime)}</span>
                 <span className="inline-flex items-center gap-2"><MapPin size={16} className="text-white/70" /> {event.location?.formattedAddress || event.location}</span>
@@ -461,9 +474,30 @@ const EventDetails = ({ darkMode }) => {
                   <div className={`text-sm font-bold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                     {isOrganizer ? 'You’re the organizer of this event!' : isApprovedAttendee ? 'You\'re registered for this event!' : 'Registration pending approval'}
                   </div>
-                  {countdown.days === 0 && countdown.hours === 0 && countdown.minutes === 0 && countdown.seconds === 0 ? (
-                    <div className={`text-lg font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      Event has started!
+                  {countdown.status === 'ended' ? (
+                    <div>
+                      <div className="text-lg font-black text-slate-400 flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-slate-400" />
+                        Event has ended
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500 mt-1 text-center">
+                        {(() => {
+                          const endTime = event.endDate ? new Date(event.endDate) : new Date(event.date);
+                          const diffMs = new Date() - endTime;
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const diffHours = Math.floor(diffMs / 3600000);
+                          const diffDays = Math.floor(diffMs / 86400000);
+                          if (diffMins < 1) return 'Ended moments ago';
+                          if (diffMins < 60) return `Ended ${diffMins}m ago`;
+                          if (diffHours < 24) return `Ended ${diffHours}h ago`;
+                          return `Ended ${diffDays}d ago`;
+                        })()}
+                      </div>
+                    </div>
+                  ) : countdown.status === 'live' ? (
+                    <div className="text-lg font-black text-green-500 flex items-center justify-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                      LIVE NOW
                     </div>
                   ) : (
                     <div className="flex justify-center gap-4 text-lg font-black">

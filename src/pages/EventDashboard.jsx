@@ -4,6 +4,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import sanitizeError from '../utils/errorMessages';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -86,7 +87,7 @@ const EventDashboard = ({ darkMode }) => {
 
         const [allRes, myRes] = await Promise.all([
           api.get('/events?limit=1000').catch(() => ({ data: { data: [] } })),
-          api.get('/events/my-events').catch(() => ({ data: { data: [] } }))
+          api.get('/events/me').catch(() => ({ data: { data: [] } }))
         ]);
 
         const allEvents = allRes.data?.data || [];
@@ -293,7 +294,7 @@ const EventDashboard = ({ darkMode }) => {
       setShowBroadcastModal(false);
       setBroadcastForm({ title: '', message: '' });
     } catch (error) {
-      alert(error.response?.data?.error || "Failed to send broadcast.");
+      alert(sanitizeError(error, "Failed to send broadcast."));
     } finally {
       setIsBroadcasting(false);
     }

@@ -4,6 +4,7 @@ import { MapPin, Globe, CalendarDays, Share2, Edit3, Heart, Plus, Camera, Ticket
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import sanitizeError from '../utils/errorMessages';
 const LiveEventStatus = ({ event }) => {
   const [status, setStatus] = useState({ text: '', type: '' });
 
@@ -120,7 +121,7 @@ const Profile = ({ darkMode }) => {
       try {
         const [allRes, myRes] = await Promise.all([
           api.get('/events?limit=1000'),
-          api.get('/events/my-events').catch(() => ({ data: { data: [] } }))
+          api.get('/events/me').catch(() => ({ data: { data: [] } }))
         ]);
         
         const allEvents = allRes.data?.data || [];
@@ -190,7 +191,7 @@ const Profile = ({ darkMode }) => {
       }
     } catch (error) {
       console.error("Failed to upload image:", error);
-      alert(error.response?.data?.error || "Failed to permanently save the profile picture.");
+      alert(sanitizeError(error, "Failed to permanently save the profile picture."));
     }
   };
 
@@ -215,7 +216,7 @@ const Profile = ({ darkMode }) => {
       }
     } catch (error) {
       console.error("Failed to upload cover photo:", error);
-      alert(error.response?.data?.error || "Failed to permanently save the cover photo.");
+      alert(sanitizeError(error, "Failed to permanently save the cover photo."));
     }
   };
 
@@ -277,7 +278,7 @@ const Profile = ({ darkMode }) => {
       alert('Profile updated successfully!');
     } catch (error) {
       console.error("Failed to update profile:", error);
-      alert(error.response?.data?.error || "Failed to update profile.");
+      alert(sanitizeError(error, "Failed to update profile."));
     } finally {
       setIsSaving(false);
     }
@@ -325,7 +326,7 @@ const Profile = ({ darkMode }) => {
       setPasswordForm({ currentPassword: '', newPassword: '' });
     } catch (error) {
       console.error("Failed to update password:", error);
-      alert(error.response?.data?.error || "Failed to update password.");
+      alert(sanitizeError(error, "Failed to update password."));
     } finally {
       setIsUpdatingPassword(false);
     }

@@ -3,6 +3,7 @@ import { motion as Motion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Lock, CheckCircle2, Download } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
+import sanitizeError from '../utils/errorMessages';
 
 const EventRegistration = ({ darkMode }) => {
   const { eventId } = useParams();
@@ -59,7 +60,7 @@ const EventRegistration = ({ darkMode }) => {
       await api.post(`/events/${eventId}/rsvp`, payload);
       setSubmitted(true);
     } catch (error) {
-      alert(error.response?.data?.error || "Failed to register. Please try again.");
+      alert(sanitizeError(error, "Failed to register. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +78,7 @@ const EventRegistration = ({ darkMode }) => {
       link.click();
       link.remove();
     } catch (error) {
-      alert('Failed to download ticket. (Make sure pdfkit is installed on your backend!)');
+      alert('Could not download your ticket right now. Please try again later.');
     } finally {
       setIsDownloading(false);
     }

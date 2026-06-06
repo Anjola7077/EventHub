@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Image as ImageIcon, Tag, Users, AlignLeft, ShieldCheck, Navigation, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api/axios'; 
+import api from '../api/axios';
+import sanitizeError from '../utils/errorMessages';
 
 const CreateEvent = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ const CreateEvent = ({ darkMode }) => {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState(() => {
@@ -63,13 +67,13 @@ const CreateEvent = ({ darkMode }) => {
       setError('Geolocation is not supported by your browser');
       return;
     }
-    
+
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         setFormData(prev => ({ ...prev, lat: latitude, lng: longitude }));
-        
+
         try {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const data = await res.json();
@@ -87,6 +91,44 @@ const CreateEvent = ({ darkMode }) => {
         setIsLocating(false);
       }
     );
+  };
+
+  const searchTimeoutRef = React.useRef(null);
+
+  const handleLocationSearch = async (query) => {
+    setFormData(prev => ({ ...prev, location: query }));
+    setShowSuggestions(true);
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (!query || query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearchingAddress(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+        const data = await res.json();
+        setLocationSuggestions(data || []);
+      } catch (e) {
+        console.error('Address search failed', e);
+        setLocationSuggestions([]);
+      } finally {
+        setIsSearchingAddress(false);
+      }
+    }, 400);
+  };
+
+  const handleSelectSuggestion = (suggestion) => {
+    setFormData(prev => ({
+      ...prev,
+      location: suggestion.display_name,
+      lat: parseFloat(suggestion.lat),
+      lng: parseFloat(suggestion.lon),
+    }));
+    setLocationSuggestions([]);
+    setShowSuggestions(false);
   };
 
   const submitEvent = async (status) => {
@@ -155,7 +197,7 @@ const CreateEvent = ({ darkMode }) => {
       setSuccess(`Event successfully saved as ${status}!`);
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to save event");
+      setError(sanitizeError(error, 'Failed to save event. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -260,12 +302,39 @@ const CreateEvent = ({ darkMode }) => {
                 <div className="flex justify-between items-end mb-2">
                   <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Venue Address</label>
                   <button type="button" onClick={handleGetLocation} disabled={isLocating} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors uppercase tracking-wider bg-blue-500/10 px-3 py-1.5 rounded-full">
-                    <Navigation size={12} className={isLocating ? "animate-spin" : ""} /> {isLocating ? 'Locating...' : 'Get Coordinates'}
+                    <Navigation size={12} className={isLocating ? "animate-spin" : ""} /> {isLocating ? 'Locating...' : 'Use GPS'}
                   </button>
                 </div>
                 <div className="relative mb-3">
-                  <MapPin size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40'}`} />
-                  <input type="text" name="location" value={formData.location} onChange={handleInputChange} placeholder="Add a physical address or meeting link" className={`${getInputStyle('location')} pl-12`} />
+                  <MapPin size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40'}`} />
+                  <input
+                    type="text"
+                    name="location"
+                    value={formData.location}
+                    onChange={(e) => handleLocationSearch(e.target.value)}
+                    onFocus={() => locationSuggestions.length > 0 && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="Search for an address or venue..."
+                    className={`${getInputStyle('location')} pl-12`}
+                  />
+                  {isSearchingAddress && (
+                    <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-blue-500" />
+                  )}
+                  {showSuggestions && locationSuggestions.length > 0 && (
+                    <div className={`absolute left-0 right-0 top-full mt-1 rounded-xl border shadow-lg z-20 max-h-48 overflow-y-auto ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                      {locationSuggestions.map((s, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onMouseDown={() => handleSelectSuggestion(s)}
+                          className={`w-full text-left px-4 py-2.5 text-xs transition-colors border-b last:border-b-0 ${darkMode ? 'hover:bg-slate-700 text-slate-300 border-slate-700' : 'hover:bg-slate-50 text-slate-700 border-slate-100'}`}
+                        >
+                          <span className="font-semibold">{s.display_name?.split(',')[0]}</span>
+                          <span className="block text-[10px] opacity-60 mt-0.5 truncate">{s.display_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -277,6 +346,7 @@ const CreateEvent = ({ darkMode }) => {
                     <input type="number" step="any" name="lng" value={formData.lng} onChange={handleInputChange} placeholder="e.g. 3.3792" className={getInputStyle('lng')} />
                   </div>
                 </div>
+                <p className={`text-[10px] mt-1.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Search an address above to auto-fill coordinates, or use GPS / enter manually.</p>
               </div>
               <div className="md:col-span-2 grid grid-cols-2 gap-3">
                 <div>

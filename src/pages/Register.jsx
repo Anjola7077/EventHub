@@ -4,6 +4,7 @@ import { User, Mail, Lock, ArrowRight, CheckCircle2, ShieldCheck, Eye, EyeOff, T
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import sanitizeError from '../utils/errorMessages';
 
 const interestsList = ['Technology', 'Music', 'Business', 'Wellness', 'Startups', 'Networking'];
 
@@ -302,13 +303,7 @@ const Register = ({ darkMode }) => {
         goToStep(4);
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || '';
-      
-      if (errorMsg.toLowerCase().includes('duplicate') || errorMsg.includes('E11000')) {
-        setError("That email or username is already in use. Please try another one or log in.");
-      } else {
-        setError(errorMsg || "Registration failed. Try again.");
-      }
+      setError(sanitizeError(error, "Registration failed. Please try again."));
     } finally {
       setIsLoading(false);
     }
@@ -326,7 +321,7 @@ const Register = ({ darkMode }) => {
       localStorage.setItem('resendOtpExpiry', expiry.toString());
       setResendTimer(60); // Start the 60-second countdown
     } catch (error) {
-      setError(error.response?.data?.error || "Failed to resend OTP. Please try again.");
+      setError(sanitizeError(error, "Failed to resend OTP. Please try again."));
     } finally {
       setIsResending(false);
     }
@@ -353,7 +348,7 @@ const Register = ({ darkMode }) => {
         setUser(res.data?.user || res.data?.data);
       }
     } catch (error) {
-      setError(error.response?.data?.error || "Invalid verification code. Please check your email.");
+      setError(sanitizeError(error, "Invalid verification code. Please check your email."));
     } finally {
       setIsLoading(false);
     }

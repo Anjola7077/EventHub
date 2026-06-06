@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import sanitizeError from '../utils/errorMessages';
 
 const Login = ({ darkMode }) => {
   const [email, setEmail] = useState('');
@@ -25,7 +26,7 @@ const Login = ({ darkMode }) => {
       await login(email, password);
       navigate(from, { replace: true }); 
     } catch (err) {
-      setError(err.response?.data?.error || "Invalid credentials");
+      setError(sanitizeError(err, "Invalid email or password."));
     } finally {
       setIsLoading(false);
     }

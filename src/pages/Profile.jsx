@@ -121,7 +121,7 @@ const Profile = ({ darkMode }) => {
       try {
         const [allRes, myRes] = await Promise.all([
           api.get('/events?limit=1000'),
-          api.get('/events/me').catch(() => ({ data: { data: [] } }))
+          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; })
         ]);
         
         const allEvents = allRes.data?.data || [];

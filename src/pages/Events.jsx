@@ -103,8 +103,9 @@ const LiveEventStatus = ({ event }) => {
   return <div className={`${baseClasses} bg-emerald-500/90 text-white border-emerald-400`}>{status.text}</div>;
 };
 
-const Events = ({ darkMode, isAuthenticated = true }) => {
+const Events = ({ darkMode }) => {
   const { user } = useContext(AuthContext);
+  const isAuthenticated = !!user;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCity, setSearchCity] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -153,7 +154,7 @@ const Events = ({ darkMode, isAuthenticated = true }) => {
         const query = `?page=${page}&limit=12${activeCategory !== 'All' ? `&category=${activeCategory}` : ''}`;
         const res = await api.get(`/events${query}`);
 
-        const fetchedEvents = res.data?.data || res.data?.events || [];
+        const fetchedEvents = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : (res.data?.data || []));
 
         if (page === 1) {
           setEvents(fetchedEvents);
@@ -164,6 +165,7 @@ const Events = ({ darkMode, isAuthenticated = true }) => {
         setHasMore(fetchedEvents.length === 12);
       } catch (error) {
         console.error("Failed to fetch events:", error?.response?.status, error?.response?.data || error.message);
+        if (page === 1) setEvents([]);
       } finally {
         setLoading(false);
       }

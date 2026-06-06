@@ -85,20 +85,19 @@ const EventDashboard = ({ darkMode }) => {
       try {
         let targetEventId = eventId || 'overview';
 
-        const [myRes, allRes] = await Promise.all([
-          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; }),
-          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } }))
-        ]);
-
+        const myRes = await api.get('/events/me');
         const myEvents = myRes.data?.data || [];
-        const allEvents = allRes.data?.data || [];
-        const merged = [...myEvents];
 
-        allEvents.forEach(allEv => {
-          if (!merged.find(e => (e._id || e.id) === (allEv._id || allEv.id))) {
-            merged.push(allEv);
-          }
-        });
+        const seenIds = new Set(myEvents.map(e => (e._id || e.id)));
+        let allPublicEvents = [];
+        try {
+          const allRes = await api.get('/events?limit=1000');
+          allPublicEvents = (allRes.data?.data || []).filter(e => !seenIds.has(e._id || e.id));
+        } catch (e) {
+          console.warn("Failed to fetch public events for dashboard:", e.message);
+        }
+
+        const merged = [...myEvents, ...allPublicEvents];
 
         const fetchedUserEvents = merged.sort((a, b) => {
           const dateA = new Date(a.createdAt || a.date || 0).getTime();
@@ -490,26 +489,26 @@ const EventDashboard = ({ darkMode }) => {
             <>
               <button
                 onClick={() => setShowBroadcastModal(true)}
-                className={`flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full transition-all font-bold text-xs sm:text-sm bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30`}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-full transition-all font-bold text-xs bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30`}
               >
-                <Megaphone size={14} className="sm:hidden" /><Megaphone size={16} className="hidden sm:inline" /> <span className="sm:inline">Broadcast</span><span className="sm:hidden">Alert</span>
+                <Megaphone size={14} /> <span>Broadcast</span>
               </button>
               <button
                 onClick={() => { setEditForm(eventData); setIsEditing(true); }}
-                className={`flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full transition-all font-bold text-xs sm:text-sm bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-full transition-all font-bold text-xs bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}
               >
-                <Edit3 size={14} className="sm:hidden" /><Edit3 size={16} className="hidden sm:inline" /> Edit
+                <Edit3 size={14} /> Edit
               </button>
               <button
-                className={`flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full transition-all font-bold text-xs sm:text-sm ${isCopied ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : `bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}`}
+                className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-full transition-all font-bold text-xs min-w-0 ${isCopied ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : `bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}`}
                 onClick={handleCopyLink}
               >
-                {isCopied ? <Check size={14} className="sm:hidden" /><Check size={16} className="hidden sm:inline" /> : <Copy size={14} className="sm:hidden" /><Copy size={16} className="hidden sm:inline" />} {isCopied ? 'Copied!' : 'Copy Link'}
+                {isCopied ? <Check size={14} /> : <Copy size={14} />} {isCopied ? 'Copied!' : 'Copy Link'}
               </button>
             </>
           )}
-          <button className="flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-all font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/30" onClick={handleExportCSV}>
-            <Download size={14} className="sm:hidden" /><Download size={16} className="hidden sm:inline" /> Export CSV
+          <button className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-all font-bold text-xs shadow-lg shadow-blue-600/30" onClick={handleExportCSV}>
+            <Download size={14} /> Export
           </button>
         </div>
       </div>

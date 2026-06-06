@@ -120,24 +120,27 @@ const Profile = ({ darkMode }) => {
     const fetchUserEvents = async () => {
       if (!user) return;
       try {
-        const [myRes, allRes] = await Promise.all([
-          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; }),
-          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } }))
-        ]);
-
+        const myRes = await api.get('/events/me');
         const myEvents = myRes.data?.data || [];
-        const allEvents = allRes.data?.data || [];
-        const merged = [...myEvents];
 
-        allEvents.forEach(allEv => {
-          if (!merged.find(e => (e._id || e.id) === (allEv._id || allEv.id))) {
-            merged.push(allEv);
-          }
-        });
+        const seenIds = new Set(myEvents.map(e => (e._id || e.id)));
+        let allPublicEvents = [];
+        try {
+          const allRes = await api.get('/events?limit=1000');
+          allPublicEvents = (allRes.data?.data || []).filter(e => !seenIds.has(e._id || e.id));
+        } catch (e) {
+          console.warn("Failed to fetch public events, using only user events:", e.message);
+        }
 
-        setEvents(merged);
+        setEvents([...myEvents, ...allPublicEvents]);
       } catch (error) {
         console.error("Failed to fetch events:", error);
+        try {
+          const allRes = await api.get('/events?limit=1000');
+          setEvents(allRes.data?.data || []);
+        } catch (fallbackErr) {
+          console.error("Fallback fetch also failed:", fallbackErr);
+        }
       } finally {
         setIsLoadingEvents(false);
       }

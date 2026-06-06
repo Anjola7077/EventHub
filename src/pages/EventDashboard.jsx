@@ -485,31 +485,31 @@ const EventDashboard = ({ darkMode }) => {
           <h1 className={`text-3xl md:text-4xl font-black mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{eventData.title}</h1>
           {eventData.date && !isNaN(new Date(eventData.date).getTime()) && <p className={`font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{new Date(eventData.date).toLocaleDateString()}</p>}
         </div>
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 w-full md:w-auto">
           {!eventData.isOverview && (
             <>
               <button
                 onClick={() => setShowBroadcastModal(true)}
-                className={`flex-1 min-w-[100px] md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-full transition-all font-bold text-sm bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30`}
+                className={`flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full transition-all font-bold text-xs sm:text-sm bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30`}
               >
-                <Megaphone size={16} /> <span className="hidden sm:inline">Broadcast</span><span className="sm:hidden">Alert</span>
+                <Megaphone size={14} className="sm:hidden" /><Megaphone size={16} className="hidden sm:inline" /> <span className="sm:inline">Broadcast</span><span className="sm:hidden">Alert</span>
               </button>
               <button
                 onClick={() => { setEditForm(eventData); setIsEditing(true); }}
-                className={`flex-1 min-w-[80px] md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-full transition-all font-bold text-sm bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}
+                className={`flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full transition-all font-bold text-xs sm:text-sm bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}
               >
-                <Edit3 size={16} /> Edit
+                <Edit3 size={14} className="sm:hidden" /><Edit3 size={16} className="hidden sm:inline" /> Edit
               </button>
               <button
-                className={`flex-1 min-w-[100px] md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-full transition-all font-bold text-sm ${isCopied ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : `bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}`}
+                className={`flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full transition-all font-bold text-xs sm:text-sm ${isCopied ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : `bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}`}
                 onClick={handleCopyLink}
               >
-                {isCopied ? <Check size={16} /> : <Copy size={16} />} {isCopied ? 'Copied!' : 'Copy Link'}
+                {isCopied ? <Check size={14} className="sm:hidden" /><Check size={16} className="hidden sm:inline" /> : <Copy size={14} className="sm:hidden" /><Copy size={16} className="hidden sm:inline" />} {isCopied ? 'Copied!' : 'Copy Link'}
               </button>
             </>
           )}
-          <button className="flex-1 min-w-[120px] md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-all font-bold text-sm shadow-lg shadow-blue-600/30" onClick={handleExportCSV}>
-            <Download size={16} /> Export CSV
+          <button className="flex items-center justify-center gap-1.5 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-all font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/30" onClick={handleExportCSV}>
+            <Download size={14} className="sm:hidden" /><Download size={16} className="hidden sm:inline" /> Export CSV
           </button>
         </div>
       </div>

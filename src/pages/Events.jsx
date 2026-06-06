@@ -152,14 +152,16 @@ const Events = ({ darkMode, isAuthenticated = true }) => {
         setLoading(true);
         const query = `?page=${page}&limit=12${activeCategory !== 'All' ? `&category=${activeCategory}` : ''}`;
         const res = await api.get(`/events${query}`);
-        
+
+        const fetchedEvents = res.data?.data || [];
+
         if (page === 1) {
-          setEvents(res.data.data);
+          setEvents(fetchedEvents);
         } else {
-          setEvents(prev => [...prev, ...res.data.data]);
+          setEvents(prev => [...prev, ...fetchedEvents]);
         }
-        
-        setHasMore(res.data.data.length === 12);
+
+        setHasMore(fetchedEvents.length === 12);
       } catch (error) {
         console.error("Failed to fetch events:", error);
       } finally {

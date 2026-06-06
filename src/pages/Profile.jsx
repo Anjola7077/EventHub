@@ -118,6 +118,7 @@ const Profile = ({ darkMode }) => {
 
   useEffect(() => {
     const fetchUserEvents = async () => {
+      if (!user) return;
       try {
         const [allRes, myRes] = await Promise.all([
           api.get('/events?limit=1000').catch(() => ({ data: { data: [] } })),
@@ -142,7 +143,7 @@ const Profile = ({ darkMode }) => {
       }
     };
     fetchUserEvents();
-  }, []);
+  }, [user]);
 
   const handleAddInterest = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {

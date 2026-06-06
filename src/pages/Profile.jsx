@@ -120,13 +120,13 @@ const Profile = ({ darkMode }) => {
     const fetchUserEvents = async () => {
       if (!user) return;
       try {
-        const [allRes, myRes] = await Promise.all([
-          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } })),
-          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; })
+        const [myRes, allRes] = await Promise.all([
+          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; }),
+          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } }))
         ]);
 
-        const allEvents = allRes.data?.data || [];
         const myEvents = myRes.data?.data || [];
+        const allEvents = allRes.data?.data || [];
         const merged = [...myEvents];
 
         allEvents.forEach(allEv => {
@@ -409,8 +409,15 @@ const Profile = ({ darkMode }) => {
   const inputStyle = `w-full px-5 py-3.5 rounded-2xl text-sm font-medium border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${darkMode ? 'bg-slate-950/50 border-slate-700 focus:border-blue-500 focus:bg-slate-900 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400'}`;
 
   const currentUserId = String(user?._id || user?.id || '');
-  const isAttendee = (e) => Array.isArray(e.attendees) && e.attendees.some(att => String(att?.user?._id || att?.user || att?._id || att) === currentUserId);
-  const createdEvents = events.filter(e => String(e.creator?._id || e.creator) === currentUserId || String(e.organizer?._id || e.organizer) === currentUserId);
+  const isAttendee = (e) => Array.isArray(e.attendees) && e.attendees.some(att => {
+    const attId = String(att?.user?._id || att?.user || att?._id || att);
+    return attId === currentUserId;
+  });
+  const createdEvents = events.filter(e => {
+    const creatorId = String(e.creator?._id || e.creator?._id?.toString?.() || e.creator);
+    const organizerId = String(e.organizer?._id || e.organizer?._id?.toString?.() || e.organizer);
+    return creatorId === currentUserId || organizerId === currentUserId;
+  });
   const upcomingEvents = events.filter(e => isAttendee(e) && new Date(e.date) >= new Date());
   const attendedEvents = events.filter(e => isAttendee(e) && new Date(e.date) < new Date());
   const likedEvents = events.filter(e => Array.isArray(e.likes) && e.likes.some(id => String(id?._id || id) === currentUserId));

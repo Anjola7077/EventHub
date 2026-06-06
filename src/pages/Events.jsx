@@ -147,13 +147,13 @@ const Events = ({ darkMode, isAuthenticated = true }) => {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      if (searchCity) return; // Prevent standard pagination loop when searching by city
+      if (searchCity) return;
       try {
         setLoading(true);
         const query = `?page=${page}&limit=12${activeCategory !== 'All' ? `&category=${activeCategory}` : ''}`;
         const res = await api.get(`/events${query}`);
 
-        const fetchedEvents = res.data?.data || [];
+        const fetchedEvents = res.data?.data || res.data?.events || [];
 
         if (page === 1) {
           setEvents(fetchedEvents);
@@ -163,12 +163,12 @@ const Events = ({ darkMode, isAuthenticated = true }) => {
 
         setHasMore(fetchedEvents.length === 12);
       } catch (error) {
-        console.error("Failed to fetch events:", error);
+        console.error("Failed to fetch events:", error?.response?.status, error?.response?.data || error.message);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchEvents();
   }, [page, activeCategory, searchCity]);
 

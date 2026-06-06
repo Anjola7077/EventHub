@@ -85,13 +85,13 @@ const EventDashboard = ({ darkMode }) => {
       try {
         let targetEventId = eventId || 'overview';
 
-        const [allRes, myRes] = await Promise.all([
-          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } })),
-          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; })
+        const [myRes, allRes] = await Promise.all([
+          api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; }),
+          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } }))
         ]);
 
-        const allEvents = allRes.data?.data || [];
         const myEvents = myRes.data?.data || [];
+        const allEvents = allRes.data?.data || [];
         const merged = [...myEvents];
 
         allEvents.forEach(allEv => {
@@ -435,7 +435,7 @@ const EventDashboard = ({ darkMode }) => {
   return (
     <Motion.main 
       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-      className="pt-32 pb-20 px-6 max-w-7xl mx-auto space-y-8"
+      className="pt-32 pb-20 px-4 sm:px-6 max-w-7xl mx-auto space-y-8 overflow-x-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -452,7 +452,7 @@ const EventDashboard = ({ darkMode }) => {
         </div>
       </div>
 
-      <div className={`border rounded-[2rem] p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 ${glassStyle}`}>
+      <div className={`border rounded-[2rem] p-4 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 overflow-hidden ${glassStyle}`}>
         <div className="flex-1 w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex gap-2">
@@ -485,7 +485,7 @@ const EventDashboard = ({ darkMode }) => {
           <h1 className={`text-3xl md:text-4xl font-black mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{eventData.title}</h1>
           {eventData.date && !isNaN(new Date(eventData.date).getTime()) && <p className={`font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{new Date(eventData.date).toLocaleDateString()}</p>}
         </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap gap-2 sm:gap-3 w-full md:w-auto">
           {!eventData.isOverview && (
             <>
               <button

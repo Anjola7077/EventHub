@@ -120,20 +120,20 @@ const Profile = ({ darkMode }) => {
     const fetchUserEvents = async () => {
       try {
         const [allRes, myRes] = await Promise.all([
-          api.get('/events?limit=1000'),
+          api.get('/events?limit=1000').catch(() => ({ data: { data: [] } })),
           api.get('/events/me').catch((err) => { console.error("Failed to fetch my events:", err.response?.status, err.response?.data); return { data: { data: [] } }; })
         ]);
-        
+
         const allEvents = allRes.data?.data || [];
         const myEvents = myRes.data?.data || [];
-        const merged = [...allEvents];
-        
-        myEvents.forEach(myEv => {
-          if (!merged.find(e => (e._id || e.id) === (myEv._id || myEv.id))) {
-            merged.push(myEv);
+        const merged = [...myEvents];
+
+        allEvents.forEach(allEv => {
+          if (!merged.find(e => (e._id || e.id) === (allEv._id || allEv.id))) {
+            merged.push(allEv);
           }
         });
-        
+
         setEvents(merged);
       } catch (error) {
         console.error("Failed to fetch events:", error);

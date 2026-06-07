@@ -59,10 +59,16 @@ const AudioPlayer = ({ src, isOwn, darkMode }) => {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setLoaded(false);
+    setLoadError(false);
 
     const onLoaded = () => {
       setLoaded(true);
@@ -70,15 +76,24 @@ const AudioPlayer = ({ src, isOwn, darkMode }) => {
     };
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
     const onEnded = () => setIsPlaying(false);
+    const onError = () => {
+      setLoadError(true);
+      setLoaded(false);
+    };
 
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+
+    audio.load();
 
     return () => {
       audio.removeEventListener('loadedmetadata', onLoaded);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+      audio.pause();
     };
   }, [src]);
 
@@ -87,10 +102,15 @@ const AudioPlayer = ({ src, isOwn, darkMode }) => {
     if (!audio) return;
     if (isPlaying) {
       audio.pause();
+      setIsPlaying(false);
     } else {
-      audio.play().catch(() => {});
+      audio.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.error('Audio play failed:', err);
+          setIsPlaying(false);
+        });
     }
-    setIsPlaying(!isPlaying);
   };
 
   const formatDuration = (s) => {
@@ -106,15 +126,28 @@ const AudioPlayer = ({ src, isOwn, darkMode }) => {
     <div className={`flex items-center gap-2 mb-2 p-2 rounded-xl ${
       isOwn ? 'bg-blue-500/30' : darkMode ? 'bg-slate-700/50' : 'bg-slate-100'
     }`}>
-      <audio ref={audioRef} src={src} preload="metadata" />
-      <button
-        onClick={togglePlay}
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-          isOwn ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
-        }`}
-      >
-        {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
-      </button>
+      <audio ref={audioRef} src={src} preload="auto" />
+      {loadError ? (
+        <a
+          href={src}
+          target="_blank"
+          rel="noreferrer"
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isOwn ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          <Play size={14} className="ml-0.5" />
+        </a>
+      ) : (
+        <button
+          onClick={togglePlay}
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+            isOwn ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          {isPlaying ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
+        </button>
+      )}
       <div className="flex-1 min-w-0">
         <div className={`h-1 rounded-full overflow-hidden ${isOwn ? 'bg-white/20' : darkMode ? 'bg-slate-600' : 'bg-slate-200'}`}>
           <div
@@ -250,11 +283,10 @@ const Chat = ({ darkMode }) => {
 
   const handleSend = async (e) => {
     if (e) e.preventDefault();
-    const text = editingMessage ? editingMessage.text : inputValue;
-    if (!text.trim() && !selectedImage && !audioBlob) return;
+    if (!inputValue.trim() && !selectedImage && !audioBlob) return;
 
     if (editingMessage) {
-      socketRef.current?.emit('editMessage', { messageId: editingMessage._id, eventId, text: text.trim() });
+      socketRef.current?.emit('editMessage', { messageId: editingMessage._id, eventId, text: inputValue.trim() });
       setEditingMessage(null);
       setInputValue('');
       return;

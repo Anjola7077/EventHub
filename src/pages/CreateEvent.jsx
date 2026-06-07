@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Calendar, MapPin, Image as ImageIcon, Tag, Users, AlignLeft, ShieldCheck, Navigation, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Image as ImageIcon, Tag, Users, AlignLeft, ShieldCheck, Navigation, Loader2, Landmark } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import sanitizeError from '../utils/errorMessages';
@@ -27,12 +26,15 @@ const CreateEvent = ({ darkMode }) => {
     return saved ? JSON.parse(saved) : {
       title: '', description: '', date: '', time: '', endDate: '', endTime: '',
       location: '', lat: '', lng: '', price: 0, capacity: '',
+      bankName: '', accountNumber: '', accountName: '',
     };
   });
 
   useEffect(() => {
     localStorage.setItem('createEventDraft', JSON.stringify(formData));
   }, [formData]);
+
+  const isPaidEvent = Number(formData.price) > 0;
 
   const categories = ['Technology', 'Design', 'Business', 'Music', 'Networking', 'Education'];
   const glassStyle = darkMode 
@@ -51,8 +53,6 @@ const CreateEvent = ({ darkMode }) => {
       return;
     }
 
-    // Directly set the file and preview URL without the strict Image validation
-    // This allows formats like HEIC to pass through to Cloudinary
     setCoverImageFile(file);
     setCoverImage(URL.createObjectURL(file));
     setError('');
@@ -137,6 +137,12 @@ const CreateEvent = ({ darkMode }) => {
     if (!formData.description) newErrors.description = true;
     if (!formData.date) newErrors.date = true;
     if (!formData.location) newErrors.location = true;
+
+    if (isPaidEvent) {
+      if (!formData.bankName) newErrors.bankName = true;
+      if (!formData.accountNumber) newErrors.accountNumber = true;
+      if (!formData.accountName) newErrors.accountName = true;
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -358,6 +364,35 @@ const CreateEvent = ({ darkMode }) => {
                   <input type="number" name="capacity" value={formData.capacity} onChange={handleInputChange} placeholder="Leave empty for unlimited" className={getInputStyle('capacity')} />
                 </div>
               </div>
+
+              {isPaidEvent && (
+                <div className="md:col-span-2">
+                  <div className={`p-6 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-900/40' : 'border-slate-200 bg-white/40'}`}>
+                    <div className="flex items-center gap-3 mb-5">
+                      <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-500"><Landmark size={18} /></div>
+                      <div>
+                        <h4 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                        <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Where should attendees send payment?</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Bank Name</label>
+                        <input type="text" name="bankName" value={formData.bankName} onChange={handleInputChange} placeholder="e.g., GTBank, Access Bank" className={getInputStyle('bankName')} />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Account Number</label>
+                        <input type="text" name="accountNumber" value={formData.accountNumber} onChange={handleInputChange} placeholder="e.g., 0123456789" className={getInputStyle('accountNumber')} />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Account Name</label>
+                        <input type="text" name="accountName" value={formData.accountName} onChange={handleInputChange} placeholder="e.g., John Doe" className={getInputStyle('accountName')} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className={`md:col-span-2 flex items-center justify-between p-5 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-white/50'}`}>
                 <div>
                   <h4 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Public Event</h4>

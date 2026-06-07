@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
- import { Users, CalendarCheck, CreditCard, TrendingUp, Download, Settings, Search, Copy, Check, Edit3, X, Image as ImageIcon, AlertTriangle, Megaphone } from 'lucide-react';
+ import { Users, CalendarCheck, CreditCard, TrendingUp, Download, Settings, Search, Copy, Check, Edit3, X, Image as ImageIcon, AlertTriangle, Megaphone, Landmark } from 'lucide-react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
@@ -242,7 +242,7 @@ const EventDashboard = ({ darkMode }) => {
 
       if (editingCoverImage) {
         const formData = new FormData();
-        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'bankName', 'accountNumber', 'accountName'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) formData.append(key, dataToSubmit[key]);
         });
@@ -256,7 +256,7 @@ const EventDashboard = ({ darkMode }) => {
         payload = formData;
       } else {
         payload = {};
-        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'ticketTiers'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'ticketTiers', 'bankName', 'accountNumber', 'accountName'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) payload[key] = dataToSubmit[key];
         });
@@ -720,6 +720,28 @@ const EventDashboard = ({ darkMode }) => {
                     <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className={inputStyle} placeholder="Unlimited" />
                   </div>
                 </div>
+                {Number(editForm.price) > 0 && (
+                  <div className={`mt-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Landmark size={16} className="text-emerald-500" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Bank Name</label>
+                        <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} className={inputStyle} placeholder="e.g., GTBank" />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Number</label>
+                        <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({...editForm, accountNumber: e.target.value})} className={inputStyle} placeholder="e.g., 0123456789" />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Name</label>
+                        <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({...editForm, accountName: e.target.value})} className={inputStyle} placeholder="e.g., John Doe" />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="pt-4 flex gap-3">
                   <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
                     Cancel

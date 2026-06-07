@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Share2, Heart, Users, ArrowRight, CalendarPlus, User, MessageSquare, Clock, Edit3, X, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { MapPin, Calendar, Share2, Heart, Users, ArrowRight, CalendarPlus, User, MessageSquare, Clock, Edit3, X, Image as ImageIcon, AlertTriangle, Landmark } from 'lucide-react';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -166,7 +166,7 @@ const EventDetails = ({ darkMode }) => {
 
       if (editingCoverImage) {
         const formData = new FormData();
-        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'bankName', 'accountNumber', 'accountName'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) formData.append(key, dataToSubmit[key]);
         });
@@ -177,7 +177,7 @@ const EventDetails = ({ darkMode }) => {
         payload = formData;
       } else {
         payload = {};
-        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'bankName', 'accountNumber', 'accountName'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) payload[key] = dataToSubmit[key];
         });
@@ -468,6 +468,35 @@ const EventDetails = ({ darkMode }) => {
               <h3 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                 {event.price === 0 ? 'Free' : `₦${event.price}`}
               </h3>
+
+              {event.price > 0 && (event.bankName || event.accountNumber || event.accountName) && (
+                <div className={`mb-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Landmark size={16} className="text-emerald-500" />
+                    <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                  </div>
+                  <div className={`space-y-2 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {event.bankName && (
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Bank</span>
+                        <span>{event.bankName}</span>
+                      </div>
+                    )}
+                    {event.accountNumber && (
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Account No.</span>
+                        <span className="font-mono">{event.accountNumber}</span>
+                      </div>
+                    )}
+                    {event.accountName && (
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Account Name</span>
+                        <span>{event.accountName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               {isRegisteredOrOrganizer ? (
                 <div className={`w-full p-4 rounded-2xl border-2 border-dashed text-center ${darkMode ? 'bg-slate-800/50 border-slate-600' : 'bg-blue-50 border-blue-200'}`}>
@@ -675,6 +704,28 @@ const EventDetails = ({ darkMode }) => {
                     <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className={inputStyle} placeholder="Unlimited" />
                   </div>
                 </div>
+                {Number(editForm.price) > 0 && (
+                  <div className={`mt-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Landmark size={16} className="text-emerald-500" />
+                      <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Bank Name</label>
+                        <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} className={inputStyle} placeholder="e.g., GTBank" />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Number</label>
+                        <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({...editForm, accountNumber: e.target.value})} className={inputStyle} placeholder="e.g., 0123456789" />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Name</label>
+                        <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({...editForm, accountName: e.target.value})} className={inputStyle} placeholder="e.g., John Doe" />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="pt-4 flex gap-3">
                   <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>Cancel</button>
                   <button type="button" onClick={handleDeleteEvent} disabled={isSaving || !hasHappened} title={!hasHappened ? "Events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>Delete</button>

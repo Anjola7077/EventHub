@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion as Motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Lock, CheckCircle2, Download } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lock, CheckCircle2, Download, Landmark } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import sanitizeError from '../utils/errorMessages';
@@ -260,6 +260,34 @@ const EventRegistration = ({ darkMode }) => {
                   <div className="font-bold">Total</div>
                   <div className="mt-2 text-xl font-black">{(!selectedTier?.price && !eventData?.price) ? 'Free' : `₦${(selectedTier?.price || eventData?.price || 0).toLocaleString()}`}</div>
                 </div>
+                {(selectedTier?.price > 0 || eventData?.price > 0) && (eventData?.bankName || eventData?.accountNumber || eventData?.accountName) && (
+                  <div className={`rounded-2xl p-4 border ${darkMode ? 'bg-slate-950 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Landmark size={16} className="text-emerald-500" />
+                      <div className="font-bold">Payment Details</div>
+                    </div>
+                    <div className={`space-y-2 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {eventData.bankName && (
+                        <div className="flex justify-between">
+                          <span className="font-semibold">Bank</span>
+                          <span>{eventData.bankName}</span>
+                        </div>
+                      )}
+                      {eventData.accountNumber && (
+                        <div className="flex justify-between">
+                          <span className="font-semibold">Account No.</span>
+                          <span className="font-mono">{eventData.accountNumber}</span>
+                        </div>
+                      )}
+                      {eventData.accountName && (
+                        <div className="flex justify-between">
+                          <span className="font-semibold">Account Name</span>
+                          <span>{eventData.accountName}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className={`rounded-[2rem] border p-6 shadow-2xl ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>

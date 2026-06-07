@@ -85,39 +85,18 @@ const EventDashboard = ({ darkMode }) => {
       try {
         let targetEventId = eventId || 'overview';
 
-        let myEvents = [];
+        let fetchedUserEvents = [];
         try {
           const myRes = await api.get('/events/me');
-          myEvents = myRes.data?.data || [];
+          fetchedUserEvents = (myRes.data?.data || []).sort((a, b) => {
+            const dateA = new Date(a.createdAt || a.date || 0).getTime();
+            const dateB = new Date(b.createdAt || b.date || 0).getTime();
+            return dateB - dateA;
+          });
         } catch (e) {
           console.warn("Failed to fetch /events/me:", e.message);
         }
 
-        const seenIds = new Set(myEvents.map(e => String(e._id || e.id)));
-        let allPublicEvents = [];
-        try {
-          const allRes = await api.get('/events?limit=1000');
-          allPublicEvents = (allRes.data?.data || []).filter(e => !seenIds.has(String(e._id || e.id)));
-        } catch (e) {
-          console.warn("Failed to fetch public events for dashboard:", e.message);
-        }
-
-        const merged = [...myEvents, ...allPublicEvents];
-        const deduped = [];
-        const dedupIds = new Set();
-        merged.forEach(e => {
-          const id = String(e._id || e.id);
-          if (!dedupIds.has(id)) {
-            dedupIds.add(id);
-            deduped.push(e);
-          }
-        });
-
-        const fetchedUserEvents = deduped.sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.date || 0).getTime();
-          const dateB = new Date(b.createdAt || b.date || 0).getTime();
-          return dateB - dateA;
-        }) || [];
         setUserEvents(fetchedUserEvents);
 
         if (fetchedUserEvents.length === 0) {

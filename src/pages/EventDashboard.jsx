@@ -196,9 +196,14 @@ const EventDashboard = ({ darkMode }) => {
     setPullDistance(0);
   };
 
-  const handleApproveAttendee = async (attendeeId) => {
+  const handleApproveAttendee = async (attendeeId, targetEventId) => {
+    const effectiveEventId = targetEventId || eventId;
+    if (!effectiveEventId || effectiveEventId === 'overview') {
+      alert("Cannot approve from overview. Select a specific event first.");
+      return;
+    }
     try {
-      await api.put(`/events/${eventId}/attendees/${attendeeId}/approve`);
+      await api.put(`/events/${effectiveEventId}/attendees/${attendeeId}/approve`);
       setAttendees(prev => prev.map(a => {
         const aId = a._id || a.id;
         const aUserId = a.user?._id || a.user?.id || a.user;
@@ -613,7 +618,7 @@ const EventDashboard = ({ darkMode }) => {
                           </a>
                         )}
                     {att?.isVerified === false && (
-                      <button onClick={() => handleApproveAttendee(att?._id || att?.id || att?.user?._id || att?.user?.id || att?.user)} className="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline border border-emerald-500/30 px-3 py-1.5 rounded-full bg-emerald-500/10">
+                      <button onClick={() => handleApproveAttendee(att?._id || att?.id, att?.eventId)} className="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline border border-emerald-500/30 px-3 py-1.5 rounded-full bg-emerald-500/10">
                             Approve
                           </button>
                         )}

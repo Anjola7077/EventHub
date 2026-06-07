@@ -120,27 +120,37 @@ const Profile = ({ darkMode }) => {
     const fetchUserEvents = async () => {
       if (!user) return;
       try {
-        const myRes = await api.get('/events/me');
-        const myEvents = myRes.data?.data || [];
+        let myEvents = [];
+        try {
+          const myRes = await api.get('/events/me');
+          myEvents = myRes.data?.data || [];
+        } catch (e) {
+          console.warn("Failed to fetch /events/me, will use public events only:", e.message);
+        }
 
-        const seenIds = new Set(myEvents.map(e => (e._id || e.id)));
+        const seenIds = new Set(myEvents.map(e => String(e._id || e.id)));
         let allPublicEvents = [];
         try {
           const allRes = await api.get('/events?limit=1000');
-          allPublicEvents = (allRes.data?.data || []).filter(e => !seenIds.has(e._id || e.id));
+          allPublicEvents = (allRes.data?.data || []).filter(e => !seenIds.has(String(e._id || e.id)));
         } catch (e) {
-          console.warn("Failed to fetch public events, using only user events:", e.message);
+          console.warn("Failed to fetch public events:", e.message);
         }
 
-        setEvents([...myEvents, ...allPublicEvents]);
+        const combined = [...myEvents, ...allPublicEvents];
+        const deduped = [];
+        const dedupIds = new Set();
+        combined.forEach(e => {
+          const id = String(e._id || e.id);
+          if (!dedupIds.has(id)) {
+            dedupIds.add(id);
+            deduped.push(e);
+          }
+        });
+
+        setEvents(deduped);
       } catch (error) {
         console.error("Failed to fetch events:", error);
-        try {
-          const allRes = await api.get('/events?limit=1000');
-          setEvents(allRes.data?.data || []);
-        } catch (fallbackErr) {
-          console.error("Fallback fetch also failed:", fallbackErr);
-        }
       } finally {
         setIsLoadingEvents(false);
       }

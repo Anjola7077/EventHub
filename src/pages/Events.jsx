@@ -186,7 +186,7 @@ const Events = ({ darkMode }) => {
         const lng = parseFloat(geoData[0].lon);
         setMapCenter([lat, lng]);
         const res = await api.get(`/events?lat=${lat}&lng=${lng}&radius=50&limit=100`);
-        setEvents(res.data.data);
+        setEvents(res.data?.data || []);
         setHasMore(false); // Disable infinite scroll during map mode
       } else { alert("City not found."); }
     } catch (err) { console.error("Map search failed", err); } 
@@ -204,7 +204,7 @@ const Events = ({ darkMode }) => {
         const data = await res.json();
         if (data?.address) setSearchCity(data.address.city || data.address.town || data.address.state || 'My Location');
         const eventsRes = await api.get(`/events?lat=${latitude}&lng=${longitude}&radius=50&limit=100`);
-        setEvents(eventsRes.data.data);
+        setEvents(eventsRes.data?.data || []);
         setHasMore(false);
       } catch (err) { console.error(err); } finally { setIsSearchingLocation(false); }
     }, () => { alert("Location access denied."); setIsSearchingLocation(false); });

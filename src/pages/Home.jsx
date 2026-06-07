@@ -146,7 +146,7 @@ const Home = ({ darkMode }) => {
 
   const cards = [
     { id: 'create', title: 'Create', description: 'Build new events and grow your audience.', icon: CalendarPlus, path: '/create-event' },
-    { id: 'discover', title: 'Discover', description: 'Find curated events near you.', icon: Compass, path: '/dashboard' },
+    { id: 'discover', title: 'Discover', description: 'Find curated events near you.', icon: Compass, path: '/events' },
     { id: 'connect', title: isAuthenticated ? 'Profile' : 'Connect', description: isAuthenticated ? 'Manage your profile and events.' : 'Meet people at events and network.', icon: Users, path: isAuthenticated ? '/profile' : '/register' },
     { id: 'attend', title: isAuthenticated ? 'Events' : 'Attend', description: isAuthenticated ? 'Browse upcoming events and join chats.' : 'Reserve tickets and join the chat.', icon: Ticket, path: isAuthenticated ? '/dashboard' : '/login' }
   ];
@@ -159,28 +159,27 @@ const Home = ({ darkMode }) => {
       transition={{ duration: 0.7, ease: 'easeOut' }}
       className={`pt-32 pb-20 px-4 md:px-8 min-h-screen ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}
     >
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        {/* Floating Notification Button */}
-        <div className="fixed bottom-6 right-6 z-50" ref={notificationRef}>
-          <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors">
-            <Bell size={24} />
-            {unreadCount > 0 && (
-              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
-                {unreadCount}
-              </span>
-            )}
-          </button>
+      {/* Floating Notification Button */}
+      <div className="fixed bottom-6 right-6 z-50" ref={notificationRef}>
+        <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors">
+          <Bell size={24} />
+          {unreadCount > 0 && (
+            <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+        </button>
 
-          {/* Notification Popup */}
-          <AnimatePresence>
-            {showNotifications && (
-              <Motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                className={`absolute bottom-full right-0 mb-4 w-80 rounded-2xl shadow-xl overflow-hidden z-50 
-                            ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-              >
+        {/* Notification Popup */}
+        <AnimatePresence>
+          {showNotifications && (
+            <Motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className={`absolute bottom-full right-0 mb-4 w-80 rounded-2xl shadow-xl overflow-hidden z-50
+                          ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+            >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
                   <h3 className="text-lg font-bold">Notifications</h3>
                   <div className="flex items-center gap-3">
@@ -240,6 +239,7 @@ const Home = ({ darkMode }) => {
           </AnimatePresence>
         </div>
 
+      <div className="mx-auto max-w-7xl px-4 py-8">
         <header className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between mb-12">
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-3xl bg-blue-600 text-white flex items-center justify-center text-xl font-black shadow-lg overflow-hidden">
@@ -252,7 +252,7 @@ const Home = ({ darkMode }) => {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {!isAuthenticated && (
+            {!isAuthenticated ? (
               <>
                 <Link to="/login" className={`rounded-full px-5 py-3 text-sm font-semibold shadow-sm transition ${darkMode ? 'border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-900 hover:bg-slate-100'}`}>
                   Login
@@ -261,6 +261,10 @@ const Home = ({ darkMode }) => {
                   Register
                 </Link>
               </>
+            ) : (
+              <Link to="/events" className="rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700">
+                Explore Events
+              </Link>
             )}
           </div>
         </header>

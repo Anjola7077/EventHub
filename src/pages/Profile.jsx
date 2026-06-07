@@ -313,7 +313,7 @@ const Profile = ({ darkMode }) => {
 
   const handleDeleteAccount = async () => {
     try {
-      await api.delete('/users/me'); 
+      await api.delete('/users/me');
       if (logout) await logout();
       else {
         localStorage.removeItem('token');
@@ -323,7 +323,8 @@ const Profile = ({ darkMode }) => {
       setDeletePassword('');
       navigate('/login', { replace: true });
     } catch (error) {
-      alert("Failed to deactivate account. Please check your connection.");
+      const message = error?.response?.data?.error || "Failed to deactivate account. Please check your connection.";
+      alert(message);
     }
   };
 

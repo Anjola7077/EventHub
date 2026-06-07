@@ -187,9 +187,7 @@ const Chat = ({ darkMode }) => {
       if (selectedDocument) formData.append('document', selectedDocument);
       if (replyingToMessage?._id) formData.append('replyTo', replyingToMessage._id);
 
-      await api.post(`/events/${eventId}/messages`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post(`/events/${eventId}/messages`, formData);
       setInputValue('');
       setSelectedImage(null);
       setAudioBlob(null);

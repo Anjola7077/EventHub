@@ -583,7 +583,7 @@ const Chat = ({ darkMode }) => {
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className={`p-2 rounded-lg ${darkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`p-2 rounded-lg ${darkMode ? 'text-white hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
           >
             <Smile size={20} />
           </button>

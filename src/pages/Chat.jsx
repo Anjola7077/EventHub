@@ -276,7 +276,7 @@ const Chat = ({ darkMode }) => {
       <div className={`px-4 py-3 border-b ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to={`/events/${eventId}`} className={`p-1 rounded-lg ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}>
+            <Link to={`/events/${eventId}`} className={`p-1 rounded-lg ${darkMode ? 'hover:bg-slate-800 text-white' : 'hover:bg-slate-100 text-slate-600'}`}>
               <ArrowLeft size={20} />
             </Link>
             <div>
@@ -305,7 +305,7 @@ const Chat = ({ darkMode }) => {
               <Pin size={14} className="text-amber-500" />
               <span className={`text-xs font-semibold ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>Pinned:</span>
               <span className={`text-xs truncate ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>{pinnedMessage.text}</span>
-              <button onClick={() => setPinnedMessage(null)} className="ml-auto text-slate-400 hover:text-slate-500"><X size={14} /></button>
+              <button onClick={() => setPinnedMessage(null)} className={`ml-auto ${darkMode ? 'text-white hover:text-slate-300' : 'text-slate-400 hover:text-slate-500'}`}><X size={14} /></button>
             </div>
           </Motion.div>
         )}
@@ -322,7 +322,7 @@ const Chat = ({ darkMode }) => {
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full opacity-60">
             <MessageSquare size={48} className={darkMode ? 'text-slate-600' : 'text-slate-300'} />
-            <p className={`mt-3 text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No messages yet. Say hi!</p>
+            <p className={`mt-3 text-sm ${darkMode ? 'text-white' : 'text-slate-400'}`}>No messages yet. Say hi!</p>
           </div>
         ) : (
           messages.map((msg) => (
@@ -340,7 +340,7 @@ const Chat = ({ darkMode }) => {
                 {/* Reply reference */}
                 {msg.replyTo && (
                   <div className={`mb-1.5 px-2 py-1 rounded-md text-xs border-l-2 ${
-                    msg.isOwn ? 'bg-blue-500/40 border-blue-300 text-blue-100' : darkMode ? 'bg-slate-700 border-slate-500 text-slate-400' : 'bg-slate-50 border-slate-300 text-slate-500'
+                    msg.isOwn ? 'bg-blue-500/40 border-blue-300 text-blue-100' : darkMode ? 'bg-slate-700 border-slate-500 text-white' : 'bg-slate-50 border-slate-300 text-slate-500'
                   }`}>
                     <CornerDownRight size={10} className="inline mr-1" />
                     {msg.replyTo.text?.substring(0, 60)}{msg.replyTo.text?.length > 60 ? '...' : ''}
@@ -431,7 +431,7 @@ const Chat = ({ darkMode }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className={`px-4 pb-1 text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+            className={`px-4 pb-1 text-xs ${darkMode ? 'text-white' : 'text-slate-500'}`}
           >
             {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
           </Motion.div>
@@ -445,29 +445,29 @@ const Chat = ({ darkMode }) => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed z-[60] bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[160px]"
+            className={`fixed z-[60] rounded-lg shadow-xl border py-1 min-w-[160px] ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}
             style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
           >
-            <button onClick={() => startReply(contextMenuMessage)} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
+            <button onClick={() => startReply(contextMenuMessage)} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-50 text-slate-900'}`}>
               <Reply size={14} /> Reply
             </button>
             {contextMenuMessage.isOwn && contextMenuMessage.text && (
-              <button onClick={() => startEdit(contextMenuMessage)} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2">
+              <button onClick={() => startEdit(contextMenuMessage)} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-50 text-slate-900'}`}>
                 <Edit2 size={14} /> Edit
               </button>
             )}
-            <div className="flex px-3 py-1.5 gap-1 border-t border-slate-100">
+            <div className={`flex px-3 py-1.5 gap-1 border-t ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>
               {quickReactions.map((emoji) => (
                 <button key={emoji} onClick={() => { handleReaction(contextMenuMessage._id, emoji); setContextMenuMessage(null); }} className="text-lg hover:scale-125 transition">{emoji}</button>
               ))}
             </div>
             {isOrganizer && (
-              <button onClick={() => { handlePin(contextMenuMessage._id); setContextMenuMessage(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100">
+              <button onClick={() => { handlePin(contextMenuMessage._id); setContextMenuMessage(null); }} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 border-t ${darkMode ? 'hover:bg-slate-700 text-white border-slate-700' : 'hover:bg-slate-50 text-slate-900 border-slate-100'}`}>
                 <Pin size={14} /> {contextMenuMessage.isPinned ? 'Unpin' : 'Pin'}
               </button>
             )}
             {contextMenuMessage.isOwn && (
-              <button onClick={() => { handleDelete(contextMenuMessage._id); setContextMenuMessage(null); }} className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-red-500 flex items-center gap-2 border-t border-slate-100">
+              <button onClick={() => { handleDelete(contextMenuMessage._id); setContextMenuMessage(null); }} className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 border-t ${darkMode ? 'hover:bg-red-900/30 text-red-400 border-slate-700' : 'hover:bg-red-50 text-red-500 border-slate-100'}`}>
                 <Trash2 size={14} /> Delete
               </button>
             )}
@@ -516,10 +516,10 @@ const Chat = ({ darkMode }) => {
           >
             <div className="px-4 py-2 flex items-center gap-2">
               {editingMessage ? <Edit2 size={14} className="text-blue-500" /> : <Reply size={14} className="text-blue-500" />}
-              <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-xs ${darkMode ? 'text-white' : 'text-slate-500'}`}>
                 {editingMessage ? 'Editing:' : 'Replying to:'} {(editingMessage || replyingToMessage)?.text?.substring(0, 40)}
               </span>
-              <button onClick={() => { setReplyingToMessage(null); setEditingMessage(null); setInputValue(''); }} className="ml-auto"><X size={14} className="text-slate-400" /></button>
+              <button onClick={() => { setReplyingToMessage(null); setEditingMessage(null); setInputValue(''); }} className="ml-auto"><X size={14} className={darkMode ? 'text-white' : 'text-slate-400'} /></button>
             </div>
           </Motion.div>
         )}
@@ -557,7 +557,7 @@ const Chat = ({ darkMode }) => {
             <button
               type="button"
               onClick={() => setShowAttachMenu(!showAttachMenu)}
-              className={`p-2 rounded-lg ${darkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+              className={`p-2 rounded-lg ${darkMode ? 'text-white hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
             >
               <Paperclip size={20} />
             </button>
@@ -600,7 +600,7 @@ const Chat = ({ darkMode }) => {
           <button
             type="button"
             onClick={isRecording ? stopRecording : startRecording}
-            className={`p-2 rounded-lg ${isRecording ? 'bg-red-500 text-white animate-pulse' : darkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
+            className={`p-2 rounded-lg ${isRecording ? 'bg-red-500 text-white animate-pulse' : darkMode ? 'text-white hover:bg-slate-800' : 'text-slate-500 hover:bg-slate-100'}`}
           >
             {isRecording ? <Square size={18} /> : <Mic size={20} />}
           </button>

@@ -146,9 +146,9 @@ const Home = ({ darkMode }) => {
 
   const cards = [
     { id: 'create', title: 'Create', description: 'Build new events and grow your audience.', icon: CalendarPlus, path: '/create-event' },
-    { id: 'discover', title: 'Discover', description: 'Find curated events near you.', icon: Compass, path: '/events' },
+    { id: 'discover', title: 'Discover', description: 'Find curated events near you.', icon: Compass, path: '/dashboard' },
     { id: 'connect', title: isAuthenticated ? 'Profile' : 'Connect', description: isAuthenticated ? 'Manage your profile and events.' : 'Meet people at events and network.', icon: Users, path: isAuthenticated ? '/profile' : '/register' },
-    { id: 'attend', title: isAuthenticated ? 'Events' : 'Attend', description: isAuthenticated ? 'Browse upcoming events and join chats.' : 'Reserve tickets and join the chat.', icon: Ticket, path: isAuthenticated ? '/events' : '/login' }
+    { id: 'attend', title: isAuthenticated ? 'Events' : 'Attend', description: isAuthenticated ? 'Browse upcoming events and join chats.' : 'Reserve tickets and join the chat.', icon: Ticket, path: isAuthenticated ? '/dashboard' : '/login' }
   ];
 
   return (
@@ -252,7 +252,7 @@ const Home = ({ darkMode }) => {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {!isAuthenticated ? (
+            {!isAuthenticated && (
               <>
                 <Link to="/login" className={`rounded-full px-5 py-3 text-sm font-semibold shadow-sm transition ${darkMode ? 'border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800' : 'border-slate-300 bg-white text-slate-900 hover:bg-slate-100'}`}>
                   Login
@@ -261,10 +261,6 @@ const Home = ({ darkMode }) => {
                   Register
                 </Link>
               </>
-            ) : (
-              <Link to="/events" className="rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700">
-                Explore Events
-              </Link>
             )}
           </div>
         </header>
@@ -282,8 +278,8 @@ const Home = ({ darkMode }) => {
                 EventHub brings creators, attendees, and organizers together with a seamless experience for building events, collecting RSVPs, and staying connected.
               </p>
               <div className="mt-10 flex flex-wrap gap-4">
-                <Link to={isAuthenticated ? '/events' : '/login'} className="inline-flex items-center gap-3 rounded-2xl bg-blue-600 px-8 py-4 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition">
-                  {isAuthenticated ? 'Explore Events' : 'Get Started'} <ArrowRight size={18} />
+                <Link to={isAuthenticated ? '/dashboard' : '/login'} className="inline-flex items-center gap-3 rounded-2xl bg-blue-600 px-8 py-4 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition">
+                  {isAuthenticated ? 'Go to Dashboard' : 'Get Started'} <ArrowRight size={18} />
                 </Link>
               </div>
             </div>

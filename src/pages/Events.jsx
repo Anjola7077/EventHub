@@ -97,7 +97,7 @@ const LiveEventStatus = ({ event }) => {
 
   const baseClasses = "absolute bottom-4 right-4 px-3 py-1.5 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
   
-  if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-800/80 text-slate-300 border-slate-600`}>{status.text}</div>;
+  if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-500/90 text-white border-slate-400`}>{status.text}</div>;
   if (status.type === 'ongoing') return <div className={`${baseClasses} bg-red-500/90 text-white border-red-400 animate-pulse`}>{status.text}</div>;
   if (status.type === 'urgent') return <div className={`${baseClasses} bg-amber-500/90 text-white border-amber-400`}>{status.text}</div>;
   return <div className={`${baseClasses} bg-emerald-500/90 text-white border-emerald-400`}>{status.text}</div>;
@@ -252,6 +252,7 @@ const Events = ({ darkMode }) => {
       <div className="text-center mb-12">
         <h1 className={`text-4xl md:text-5xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Discover Events</h1>
         <p className={`text-sm font-semibold opacity-100 max-w-xl mx-auto ${darkMode ? 'text-white' : 'text-slate-600'}`}>Find your next experience and connect with like-minded people.</p>
+
       </div>
 
       <form onSubmit={handleCitySearch} className="mb-8 flex gap-3 max-w-2xl mx-auto">
@@ -332,7 +333,7 @@ const Events = ({ darkMode }) => {
                       <div className="p-2 min-w-[150px]">
                         <img src={event.coverImage || '/placeholder.png'} alt={event.title} className="w-full h-20 object-cover rounded-lg mb-2" />
                         <p className="font-bold text-[13px] leading-tight mb-1 truncate">{event.title}</p>
-                        <p className={`text-[10px] mb-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{new Date(event.date).toLocaleDateString()}</p>
+                        <p className={`text-[10px] mb-3 ${darkMode ? 'text-white' : 'text-slate-500'}`}>{new Date(event.date).toLocaleDateString()}</p>
                         <Link to={`/event-details/${event._id || event.id}`} className="block w-full text-center bg-blue-600 hover:bg-blue-700 !text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors shadow-sm" style={{ color: '#ffffff' }}>View Event</Link>
                       </div>
                     </Popup>
@@ -388,7 +389,7 @@ const Events = ({ darkMode }) => {
               <Search size={32} />
             </div>
             <h3 className={`text-xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>No events found</h3>
-            <p className={`text-sm font-medium max-w-sm mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-sm font-medium max-w-sm mb-8 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
               {searchQuery 
                 ? `We couldn't find any events matching "${searchQuery}". Try adjusting your filters or search terms.` 
                 : `We couldn't find any events in this category. Try adjusting your filters.`}

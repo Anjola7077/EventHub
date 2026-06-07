@@ -317,7 +317,7 @@ const EventDetails = ({ darkMode }) => {
             <AlertTriangle size={32} />
           </div>
           <h2 className="text-2xl font-black mb-4 text-red-500">An Error Occurred</h2>
-          <p className={`text-sm font-medium mb-8 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>{error}</p>
+          <p className={`text-sm font-medium mb-8 ${darkMode ? 'text-white' : 'text-slate-600'}`}>{error}</p>
           <Link to="/events" className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors">
             Back to Events
           </Link>
@@ -455,7 +455,7 @@ const EventDetails = ({ darkMode }) => {
                     <img src={organizer.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${organizer.fullName || 'Organizer'}`} alt="Organizer" className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <p className={`text-xs font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Hosted By</p>
+                    <p className={`text-xs font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-white' : 'text-slate-500'}`}>Hosted By</p>
                     <h3 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{organizer.fullName || 'Event Organizer'}</h3>
                   </div>
                 </section>
@@ -471,16 +471,16 @@ const EventDetails = ({ darkMode }) => {
               
               {isRegisteredOrOrganizer ? (
                 <div className={`w-full p-4 rounded-2xl border-2 border-dashed text-center ${darkMode ? 'bg-slate-800/50 border-slate-600' : 'bg-blue-50 border-blue-200'}`}>
-                  <div className={`text-sm font-bold mb-2 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <div className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
                     {isOrganizer ? 'You’re the organizer of this event!' : isApprovedAttendee ? 'You\'re registered for this event!' : 'Registration pending approval'}
                   </div>
                   {countdown.status === 'ended' ? (
                     <div>
-                      <div className="text-lg font-black text-slate-400 flex items-center justify-center gap-2">
+                      <div className={`text-lg font-black flex items-center justify-center gap-2 ${darkMode ? 'text-white' : 'text-slate-400'}`}>
                         <span className="w-2 h-2 rounded-full bg-slate-400" />
                         Event has ended
                       </div>
-                      <div className="text-xs font-semibold text-slate-500 mt-1 text-center">
+                      <div className={`text-xs font-semibold mt-1 text-center ${darkMode ? 'text-white' : 'text-slate-500'}`}>
                         {(() => {
                           const endTime = event.endDate ? new Date(event.endDate) : new Date(event.date);
                           const diffMs = new Date() - endTime;
@@ -503,19 +503,19 @@ const EventDetails = ({ darkMode }) => {
                     <div className="flex justify-center gap-4 text-lg font-black">
                       <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         <div className="text-2xl font-black text-blue-600">{countdown.days}</div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Days</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Days</div>
                       </div>
                       <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         <div className="text-2xl font-black text-blue-600">{countdown.hours}</div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Hours</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Hours</div>
                       </div>
                       <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         <div className="text-2xl font-black text-blue-600">{countdown.minutes}</div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Min</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Min</div>
                       </div>
                       <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         <div className="text-2xl font-black text-blue-600">{countdown.seconds}</div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Sec</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Sec</div>
                       </div>
                     </div>
                   )}
@@ -581,7 +581,7 @@ const EventDetails = ({ darkMode }) => {
                     <Popup className="rounded-xl">
                       <div className="p-1">
                         <p className="font-bold text-[13px] mb-1">{event.title}</p>
-                        <p className="text-[10px] text-slate-500 leading-tight">{event.location.formattedAddress}</p>
+                        <p className={`text-[10px] leading-tight ${darkMode ? 'text-white' : 'text-slate-500'}`}>{event.location.formattedAddress}</p>
                       </div>
                     </Popup>
                   </Marker>
@@ -702,7 +702,7 @@ const EventDetails = ({ darkMode }) => {
                 </div>
                 <div>
                   <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Delete Event</h2>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
+                  <p className={`text-sm mt-1 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

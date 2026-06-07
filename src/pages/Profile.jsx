@@ -63,7 +63,7 @@ const LiveEventStatus = ({ event }) => {
 
   const baseClasses = "absolute bottom-3 right-3 px-3 py-1.5 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
   
-  if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-800/80 text-slate-300 border-slate-600`}>{status.text}</div>;
+  if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-500/90 text-white border-slate-400`}>{status.text}</div>;
   if (status.type === 'ongoing') return <div className={`${baseClasses} bg-red-500/90 text-white border-red-400 animate-pulse`}>{status.text}</div>;
   if (status.type === 'urgent') return <div className={`${baseClasses} bg-amber-500/90 text-white border-amber-400`}>{status.text}</div>;
   return <div className={`${baseClasses} bg-emerald-500/90 text-white border-emerald-400`}>{status.text}</div>;
@@ -745,11 +745,11 @@ const Profile = ({ darkMode }) => {
             animate={{ opacity: 1, scale: 1 }}
             className={`col-span-full py-16 px-6 text-center rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center ${darkMode ? 'border-slate-700 bg-slate-800/20' : 'border-slate-200 bg-slate-50'}`}
           >
-            <div className={`w-20 h-20 mb-6 rounded-full flex items-center justify-center ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-white shadow-sm text-slate-400'}`}>
+            <div className={`w-20 h-20 mb-6 rounded-full flex items-center justify-center ${darkMode ? 'bg-slate-800 text-white' : 'bg-white shadow-sm text-slate-400'}`}>
               <CalendarDays size={32} />
             </div>
             <h3 className={`text-xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Nothing to see here</h3>
-            <p className={`text-sm font-medium max-w-sm mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-sm font-medium max-w-sm mb-8 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
               {activeTab === 'created' ? "You haven't created any events yet. Host your first experience today!"
                 : activeTab === 'upcoming' ? "You don't have any upcoming events. Discover what's happening near you."
                 : activeTab === 'attended' ? "You haven't attended any past events yet."
@@ -774,7 +774,7 @@ const Profile = ({ darkMode }) => {
               >
                 Previous
               </button>
-              <span className={`text-sm font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-500'}`}>
                 Page {page} of {totalPages}
               </span>
               <button 
@@ -808,7 +808,7 @@ const Profile = ({ darkMode }) => {
                   <X size={20} />
                 </button>
               </div>
-              <p className={`text-sm mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              <p className={`text-sm mb-6 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
                 Are you sure you want to delete your account? This action is permanent and cannot be undone. All your created events and tickets will be lost.
               </p>
               <div className="space-y-2 mb-8 text-left">
@@ -1006,7 +1006,7 @@ const Profile = ({ darkMode }) => {
                 </div>
                 <div>
                   <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Delete Event</h2>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
+                  <p className={`text-sm mt-1 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

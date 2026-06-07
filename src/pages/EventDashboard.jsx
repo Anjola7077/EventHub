@@ -320,7 +320,7 @@ const EventDashboard = ({ darkMode }) => {
       <Motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-40 pb-20 px-6 max-w-xl mx-auto text-center">
         <div className={`p-12 rounded-[2.5rem] border ${glassStyle}`}>
           <h2 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>No events found</h2>
-          <p className={`text-sm font-medium mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>You haven't created any events yet, or the event you're looking for doesn't exist.</p>
+          <p className={`text-sm font-medium mb-8 ${darkMode ? 'text-white' : 'text-slate-600'}`}>You haven't created any events yet, or the event you're looking for doesn't exist.</p>
           <Link to="/create-event" className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors">
             Create your first event
           </Link>
@@ -496,7 +496,7 @@ const EventDashboard = ({ darkMode }) => {
             )}
           </div>
           <h1 className={`text-3xl md:text-4xl font-black mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{eventData.title}</h1>
-          {eventData.date && !isNaN(new Date(eventData.date).getTime()) && <p className={`font-semibold ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{new Date(eventData.date).toLocaleDateString()}</p>}
+          {eventData.date && !isNaN(new Date(eventData.date).getTime()) && <p className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-600'}`}>{new Date(eventData.date).toLocaleDateString()}</p>}
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3 w-full md:w-auto max-w-full">
           {!eventData.isOverview && (
@@ -574,7 +574,7 @@ const EventDashboard = ({ darkMode }) => {
           <div className="p-6 border-b border-black/5 dark:border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h2 className={`text-lg font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Recent Registrations</h2>
             <div className="relative w-full sm:w-auto">
-              <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+              <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-500'}`} />
               <input 
                 type="text"
                 placeholder="Search by name or email..."
@@ -587,7 +587,7 @@ const EventDashboard = ({ darkMode }) => {
           <div className="overflow-x-auto">
             <table className={`w-full text-left ${darkMode ? 'text-white' : 'text-slate-900'}`}>
               <thead>
-                <tr className={`text-xs uppercase tracking-wider opacity-100 ${darkMode ? 'text-slate-400' : 'text-slate-600'} bg-black/5 dark:bg-white/5`}>
+                <tr className={`text-xs uppercase tracking-wider opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'} bg-black/5 dark:bg-white/5`}>
                   <th className="px-6 py-4 font-extrabold">Attendee</th>
                   <th className="px-6 py-4 font-extrabold">Ticket</th>
                   <th className="px-6 py-4 font-extrabold">Status</th>
@@ -763,7 +763,7 @@ const EventDashboard = ({ darkMode }) => {
                 </div>
                 <div>
                   <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Delete Event</h2>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
+                  <p className={`text-sm mt-1 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

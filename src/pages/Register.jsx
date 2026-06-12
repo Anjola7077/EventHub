@@ -22,9 +22,9 @@ const Register = ({ darkMode }) => {
   const [isResending, setIsResending] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [errors, setErrors] = useState({});
-  const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken'
-  const [emailStatus, setEmailStatus] = useState(''); // 'checking', 'available', 'taken'
-  
+  const [usernameStatus, setUsernameStatus] = useState('');
+  const [emailStatus, setEmailStatus] = useState('');
+
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
@@ -71,7 +71,7 @@ const Register = ({ darkMode }) => {
     special: /[!@#$%^&*(),.?":{}|<>\-_]/.test(form.password),
   };
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
-  
+
   const passwordScore = Object.values(passwordRequirements).filter(Boolean).length;
   let strengthLabel = '';
   let strengthColor = '';
@@ -106,8 +106,7 @@ const Register = ({ darkMode }) => {
       setEmailStatus('');
       return;
     }
-    
-    // Only run backend check if it loosely looks like a valid email
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) {
       setEmailStatus('');
@@ -158,7 +157,7 @@ const Register = ({ darkMode }) => {
     if (!form.email || emailStatus === 'taken') newErrors.email = true;
     if (!form.gender) newErrors.gender = true;
     if (!form.phone) newErrors.phone = true;
-    
+
     let errorMessage = 'Please fill in all highlighted fields.';
 
     if (!isEditing) {
@@ -168,9 +167,9 @@ const Register = ({ darkMode }) => {
         newErrors.password = true;
         errorMessage = 'Please meet all password requirements.';
       }
-      
+
       if (!form.confirmPassword) newErrors.confirmPassword = true;
-      
+
       if (form.password && isPasswordValid && form.confirmPassword && form.password !== form.confirmPassword) {
         newErrors.password = true;
         newErrors.confirmPassword = true;
@@ -221,16 +220,16 @@ const Register = ({ darkMode }) => {
     } else if (e.target.type === 'file') {
       const file = e.target.files[0];
       if (file) {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        if (file.size > 5 * 1024 * 1024) {
           showToast("File size must be less than 5MB.", "error");
           return;
         }
         const reader = new FileReader();
         reader.onloadend = () => {
-          setForm((prev) => ({ ...prev, [field]: reader.result })); // Store as Base64 for JSON transmission
+          setForm((prev) => ({ ...prev, [field]: reader.result }));
         };
         reader.readAsDataURL(file);
-        return; // Early return since FileReader is async
+        return;
       } else value = '';
     } else {
       value = e.target.value;
@@ -241,8 +240,7 @@ const Register = ({ darkMode }) => {
   const handleOtpChange = (index) => (e) => {
     const val = e.target.value.replace(/[^0-9]/g, '');
     setOtp((prev) => prev.map((digit, idx) => (idx === index ? val : digit)));
-    
-    // Auto-focus next input
+
     if (val && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) nextInput.focus();
@@ -258,7 +256,7 @@ const Register = ({ darkMode }) => {
     setError('');
     try {
       if (isEditing) {
-        // Assuming your backend uses PATCH /users/me to update profile info
+
         const updatePayload = {
           fullName: form.name,
           username: form.username,
@@ -269,13 +267,13 @@ const Register = ({ darkMode }) => {
           website: form.website,
           interests: selectedInterests
         };
-        
+
         const res = await api.patch('/users/me', updatePayload);
-        
+
         if (setUser) {
           setUser(prev => ({ ...prev, ...updatePayload, ...(res.data?.user || res.data?.data || res.data || {}) }));
         }
-        
+
         showToast('Profile updated successfully!', 'success');
         setTimeout(() => navigate('/profile', { replace: true }), 1500);
       } else {
@@ -295,11 +293,11 @@ const Register = ({ darkMode }) => {
           interests: selectedInterests
         });
         localStorage.removeItem('registrationDraft');
-        
+
         const expiry = Date.now() + 60 * 1000;
         localStorage.setItem('resendOtpExpiry', expiry.toString());
         setResendTimer(60);
-        
+
         goToStep(4);
       }
     } catch (error) {
@@ -314,12 +312,12 @@ const Register = ({ darkMode }) => {
     setError('');
     setResendStatus('');
     try {
-      // Assuming your backend has an endpoint to resend the OTP
+
       await api.post('/auth/resend-otp', { email: form.email });
       setResendStatus('A new OTP has been sent to your email.');
       const expiry = Date.now() + 60 * 1000;
       localStorage.setItem('resendOtpExpiry', expiry.toString());
-      setResendTimer(60); // Start the 60-second countdown
+      setResendTimer(60);
     } catch (error) {
       setError(sanitizeError(error, "Failed to resend OTP. Please try again."));
     } finally {
@@ -333,14 +331,13 @@ const Register = ({ darkMode }) => {
     setIsLoading(true);
     setError('');
     const otpCode = otp.join('');
-    
+
     try {
       const res = await api.post('/auth/verify', { email: form.email, otp: otpCode });
-      localStorage.removeItem('resendOtpExpiry'); // Cleanup on success
+      localStorage.removeItem('resendOtpExpiry');
       setIsComplete(true);
       setStep(5);
-      
-      // Save token and instantly log the user in on the frontend
+
       if (res.data?.token) {
         localStorage.setItem('token', res.data.token);
       }
@@ -412,7 +409,7 @@ const Register = ({ darkMode }) => {
                   style={{ width: step === 1 ? '0%' : step === 2 ? '33%' : step === 3 ? '66%' : '100%' }}
                 />
               </div>
-              
+
               {error && <div className="mt-6 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold text-center border border-red-500/20">{error}</div>}
             </div>
             <AnimatePresence mode="wait">
@@ -488,8 +485,8 @@ const Register = ({ darkMode }) => {
                       <span className={`text-[10px] uppercase tracking-wider font-black ${strengthLabel === 'Weak' ? 'text-red-500' : strengthLabel === 'Good' ? 'text-amber-500' : 'text-emerald-500'}`}>{strengthLabel}</span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
-                      <Motion.div 
-                        className={`h-full ${strengthColor} transition-colors duration-300`} 
+                      <Motion.div
+                        className={`h-full ${strengthColor} transition-colors duration-300`}
                         initial={{ width: '0%' }}
                         animate={{ width: strengthWidth }}
                       />
@@ -509,9 +506,9 @@ const Register = ({ darkMode }) => {
                         Cancel
                       </button>
                     )}
-                    <button 
-                      type="button" 
-                      onClick={handleNextStep1} 
+                    <button
+                      type="button"
+                      onClick={handleNextStep1}
                       className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white hover:bg-blue-700 transition"
                     >
                       Continue <ArrowRight size={18} />
@@ -536,190 +533,5 @@ const Register = ({ darkMode }) => {
                       <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Profile Images</label>
                       <div className="relative mb-8">
                         <label className={`block h-32 w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden relative ${errors.coverPhoto ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : (darkMode ? 'border-slate-700 bg-slate-800/50 hover:border-blue-500' : 'border-slate-300 bg-slate-50 hover:border-blue-500')}`}>
-                          <input type="file" className="hidden" accept="image/*" onChange={handleFormChange('coverPhoto')} />
-                          {form.coverPhoto ? (
-                            <img src={form.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
-                          ) : (
-                            <>
-                              <ImageIcon className={`mb-2 ${form.coverPhoto ? 'text-blue-500' : 'text-slate-400'}`} size={24} />
-                              <span className="text-xs font-semibold text-slate-500">{form.coverPhoto ? 'Cover photo selected' : 'Upload Cover Photo'}</span>
-                            </>
-                          )}
-                        </label>
-                        <label className={`absolute -bottom-6 left-6 h-16 w-16 sm:h-20 sm:w-20 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${errors.profilePicture ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : (darkMode ? 'border-slate-900 bg-slate-800 hover:border-blue-500' : 'border-white bg-slate-100 hover:border-blue-500')}`}>
-                          <input type="file" className="hidden" accept="image/*" onChange={handleFormChange('profilePicture')} />
-                          {form.profilePicture ? (
-                            <img src={form.profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                          ) : (
-                            <Camera className={form.profilePicture ? 'text-blue-500' : 'text-slate-400'} size={20} />
-                          )}
-                        </label>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Bio</label>
-                      <textarea value={form.bio} onChange={handleFormChange('bio')} placeholder="Tell people a little about yourself... e.g. 'I love tech events & concerts'" rows={4} className={getInputStyle('bio')} />
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Location</label>
-                        <input value={form.location} onChange={handleFormChange('location')} placeholder="e.g. Lagos, Nigeria" className={getInputStyle('location')} />
-                      </div>
-                      <div className="space-y-2">
-                        <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Website / Portfolio <span className="opacity-50 text-xs font-normal">(Optional)</span></label>
-                        <input value={form.website} onChange={handleFormChange('website')} placeholder="https://yoursite.com" className={getInputStyle('website')} />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <button type="button" onClick={() => goToStep(1)} className={`rounded-2xl border px-6 py-4 text-sm font-bold transition ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}>
-                      ← Back
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={handleNextStep2} 
-                      className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white hover:bg-blue-700 transition"
-                    >
-                      Continue <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </Motion.form>
-              )}
-              {step === 3 && (
-                <Motion.form
-                  key="step3"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h4 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Your Interests</h4>
-                    <p className={`text-sm mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Pick the things you love — we'll use these to suggest events just for you.</p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {interestsList.map((interest) => (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => toggleInterest(interest)}
-                        className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${selectedInterests.includes(interest) ? 'border-blue-600 bg-blue-600/10 text-blue-700 dark:text-blue-300' : 'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-white'}`}
-                      >
-                        {interest}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <button type="button" onClick={() => goToStep(2)} className={`rounded-2xl border px-6 py-4 text-sm font-bold transition ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}>
-                      ← Back
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={submitRegistration} 
-                      disabled={selectedInterests.length === 0 || isLoading}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoading ? (isEditing ? "Saving..." : "Creating...") : (isEditing ? "Save Changes" : "Continue")} <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </Motion.form>
-              )}
-              {step === 4 && (
-                <Motion.form
-                  key="step4"
-                  onSubmit={verifyOTP}
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h4 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Almost there!</h4>
-                    <p className={`text-sm mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>We sent a 6-digit code to <strong>{form.email || 'your email'}</strong>. Enter it below to verify your account.</p>
-                  </div>
-                  <div className="grid grid-cols-6 gap-2">
-                    {otp.map((digit, index) => (
-                      <input
-                        key={index}
-                        id={`otp-${index}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={handleOtpChange(index)}
-                        className={`w-full rounded-2xl border text-center text-xl font-black focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900/60 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-                      />
-                    ))}
-                  </div>
-                
-                {resendStatus && <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-bold text-center border border-emerald-500/20">{resendStatus}</div>}
-                
-                <div className="text-center">
-                  <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    Didn't receive the code?{' '}
-                    {resendTimer > 0 ? (
-                      <span className="text-slate-500 font-bold">Resend in {resendTimer}s</span>
-                    ) : (
-                      <button type="button" onClick={handleResendOTP} disabled={isResending} className="text-blue-600 font-bold hover:underline disabled:opacity-50">
-                        {isResending ? 'Resending...' : 'Resend OTP'}
-                      </button>
-                    )}
-                  </p>
-                </div>
+                          <input type="file" className="hidden" accept="image
 
-                  <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-sm dark:border-slate-700 dark:bg-slate-800">
-                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-5 w-5 rounded-md text-blue-600 focus:ring-blue-500" />
-                    <span>I agree to the <a href="#" className="text-blue-600 hover:underline">Terms & Conditions</a> and <a href="#" className="text-blue-600 hover:underline">Privacy Policy</a>.</span>
-                  </label>
-                  <div className="flex justify-between gap-3">
-                    <button type="button" onClick={() => goToStep(3)} className={`rounded-2xl border px-6 py-4 text-sm font-bold transition ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}>
-                      ← Back
-                    </button>
-                    <button 
-                      type="submit" 
-                      disabled={!agreed || isLoading || otp.some(digit => !digit)} 
-                      className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isLoading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <>Create Account <PartyPopper size={18} /></>}
-                    </button>
-                  </div>
-                </Motion.form>
-              )}
-              {step === 5 && isComplete && (
-                <Motion.div
-                  key="step5"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="space-y-6 text-center py-8"
-                >
-                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">
-                    <ShieldCheck size={48} />
-                  </div>
-                  <h3 className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Welcome aboard!</h3>
-                  <p className={`text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`}>Your account is verified. Start discovering events made for you.</p>
-                  <Link to="/events" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white hover:bg-blue-700 transition">
-                    Explore Events
-                  </Link>
-                </Motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {toast.show && (
-          <Motion.div
-            initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
-            className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl z-50 font-bold text-sm text-white ${toast.type === 'error' ? 'bg-red-600' : 'bg-emerald-600'}`}
-          >
-            {toast.message}
-          </Motion.div>
-        )}
-      </AnimatePresence>
-    </Motion.main>
-  );
-};
-
-export default Register;

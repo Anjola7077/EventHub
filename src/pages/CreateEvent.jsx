@@ -37,8 +37,8 @@ const CreateEvent = ({ darkMode }) => {
   const isPaidEvent = Number(formData.price) > 0;
 
   const categories = ['Technology', 'Design', 'Business', 'Music', 'Networking', 'Education'];
-  const glassStyle = darkMode 
-    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl' 
+  const glassStyle = darkMode
+    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl'
     : 'bg-white/60 border-white/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.08)]';
   const getInputStyle = (field) => `w-full px-5 py-4 rounded-2xl text-sm font-medium border transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${
     errors[field] ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : (darkMode ? 'bg-slate-900/50 border-slate-700 focus:border-blue-500 focus:bg-slate-900 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400')
@@ -210,7 +210,7 @@ const CreateEvent = ({ darkMode }) => {
   };
 
   return (
-    <Motion.main 
+    <Motion.main
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="pt-32 pb-20 px-4 md:px-8 max-w-6xl mx-auto"
     >
@@ -242,10 +242,10 @@ const CreateEvent = ({ darkMode }) => {
 
       {error && <div className="mb-8 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold border border-red-500/20">{error}</div>}
       {success && <div className="mb-8 p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-bold border border-emerald-500/20">{success}</div>}
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          
+
           <Motion.section whileHover={{ scale: 1.01 }} className={`p-8 rounded-[2rem] border ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-500"><AlignLeft size={20} /></div>
@@ -264,8 +264,8 @@ const CreateEvent = ({ darkMode }) => {
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
                       className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
-                        activeCategory === cat 
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105' 
+                        activeCategory === cat
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
                           : `border ${darkMode ? 'border-slate-700 hover:bg-slate-800 text-white' : 'border-blue-200 hover:bg-blue-50 text-slate-700'} opacity-100 hover:opacity-100`
                       }`}
                     >
@@ -281,7 +281,6 @@ const CreateEvent = ({ darkMode }) => {
             </div>
           </Motion.section>
 
-       
           <Motion.section whileHover={{ scale: 1.01 }} className={`p-8 rounded-[2rem] border ${glassStyle}`}>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-500"><Calendar size={20} /></div>
@@ -405,53 +404,12 @@ const CreateEvent = ({ darkMode }) => {
             </div>
           </Motion.section>
         </div>
-      
+
         <div className="space-y-6">
           <Motion.div whileHover={{ scale: 1.02 }} className={`p-6 rounded-[2rem] border ${glassStyle}`}>
             <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
               <ImageIcon size={16} /> Cover Image
             </h3>
             <label className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 hover:bg-slate-800/50 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 bg-slate-50'}`}>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              {coverImage ? (
-                <img src={coverImage} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
-              ) : (
-                <>
-                  <div className="w-12 h-12 rounded-full bg-blue-500/10 group-hover:bg-blue-500/20 text-blue-500 flex items-center justify-center mx-auto mb-3 transition-colors">
-                    <ImageIcon size={24} />
-                  </div>
-                  <p className={`text-sm font-bold mb-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Click to upload</p>
-                  <p className={`text-xs opacity-100 font-medium ${darkMode ? 'text-white' : 'text-slate-600'}`}>PNG, JPG up to 5MB</p>
-                </>
-              )}
-            </label>
-          </Motion.div>
-          
-          <button className={`w-full py-4 rounded-2xl font-bold tracking-wide border transition-colors ${darkMode ? 'border-slate-700 hover:bg-slate-800 text-white' : 'border-blue-200 hover:bg-blue-50 text-slate-900'}`}>
-            <Link to="/flyer-designer" className="block w-full h-full flex items-center justify-center">
-              Design Flyer
-            </Link>
-          </button>
-          
-          
-          <button 
-            className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black tracking-wide shadow-xl shadow-blue-600/30 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed" 
-            onClick={() => submitEvent('published')}
-            disabled={isLoading}
-          >
-            Publish Event
-          </button>
-          <button 
-            className={`w-full py-4 rounded-2xl font-bold tracking-wide border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${darkMode ? 'border-slate-700 hover:bg-slate-800 text-white' : 'border-blue-200 hover:bg-blue-50 text-slate-900'}`} 
-            onClick={() => submitEvent('draft')}
-            disabled={isLoading}
-          >
-            Save as Draft
-          </button>
-        </div>
-      </div>
-    </Motion.main>
-  );
-};
+              <input type="file" accept="image
 
-export default CreateEvent;

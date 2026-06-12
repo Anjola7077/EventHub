@@ -17,10 +17,9 @@ const InstallAppButton = ({ darkMode }) => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     window.addEventListener('appinstalled', () => {
-      setDeferredPrompt(null); // Hide button once installed
+      setDeferredPrompt(null);
     });
 
-    // Detect iOS and Standalone mode
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isAppleDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isAppleDevice);
@@ -30,7 +29,7 @@ const InstallAppButton = ({ darkMode }) => {
   }, []);
 
   const handleInstallClick = async () => {
-    // If it's iOS and not installed, show our custom instructional modal
+
     if (isIOS && !isStandalone) {
       setShowIOSModal(true);
       return;
@@ -42,7 +41,6 @@ const InstallAppButton = ({ darkMode }) => {
     if (outcome === 'accepted') setDeferredPrompt(null);
   };
 
-  // Show the button if the prompt is ready OR if they are an uninstalled iOS user
   if (!deferredPrompt && (!isIOS || isStandalone)) return null;
 
   return (

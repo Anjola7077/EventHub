@@ -24,11 +24,11 @@ const createCustomIcon = (imageUrl) => {
 
 const createClusterCustomIcon = (cluster) => {
   const count = cluster.getChildCount();
-  // Increase bubble size slightly for larger clusters
+
   let size = 40;
   if (count >= 10) size = 48;
   if (count >= 50) size = 56;
-  
+
   return L.divIcon({
     className: 'bg-transparent border-none',
     html: `<div class="flex items-center justify-center rounded-full bg-blue-600 text-white font-bold border-4 border-blue-200/50 shadow-lg shadow-blue-600/40 hover:bg-blue-700 transition-colors" style="width: ${size}px; height: ${size}px;">
@@ -48,7 +48,7 @@ const LiveEventStatus = ({ event }) => {
       let startStr = event.date || new Date().toISOString();
       if (startStr.includes('T')) startStr = startStr.split('T')[0];
       const start = new Date(`${startStr}T${event.time || '00:00'}`).getTime();
-      
+
       let endStr = event.endDate || startStr;
       if (endStr.includes('T')) endStr = endStr.split('T')[0];
       const end = new Date(`${endStr}T${event.endTime || '23:59'}`).getTime();
@@ -59,12 +59,11 @@ const LiveEventStatus = ({ event }) => {
         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const secs = Math.floor((diff % (1000 * 60)) / 1000);
-        
+
         if (days > 0) setStatus({ text: `Starts in ${days}d ${hours}h`, type: 'upcoming' });
         else if (hours > 0) setStatus({ text: `Starts in ${hours}h ${mins}m`, type: 'upcoming' });
         else setStatus({ text: `Starts in ${mins}m ${secs}s`, type: 'urgent' });
-        
-        // 15 Minute Warning System Notification
+
         const fifteenKey = `notif_15m_${event._id || event.id}`;
         if (diff <= 15 * 60 * 1000 && diff > 0 && !localStorage.getItem(fifteenKey)) {
           if (window.Notification?.permission === 'granted') {
@@ -74,8 +73,7 @@ const LiveEventStatus = ({ event }) => {
         }
       } else if (now >= start && now <= end) {
         setStatus({ text: 'LIVE 🔴', type: 'ongoing' });
-        
-        // Live System Notification
+
         const liveKey = `notif_live_${event._id || event.id}`;
         if (!localStorage.getItem(liveKey)) {
           if (now - start < 15 * 60 * 1000 && window.Notification?.permission === 'granted') {
@@ -87,7 +85,7 @@ const LiveEventStatus = ({ event }) => {
         setStatus({ text: 'ENDED', type: 'ended' });
       }
     };
-    
+
     updateStatus();
     const interval = setInterval(updateStatus, 1000);
     return () => clearInterval(interval);
@@ -96,7 +94,7 @@ const LiveEventStatus = ({ event }) => {
   if (!status.text) return null;
 
   const baseClasses = "absolute bottom-4 right-4 px-3 py-1.5 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
-  
+
   if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-500/90 text-white border-slate-400`}>{status.text}</div>;
   if (status.type === 'ongoing') return <div className={`${baseClasses} bg-red-500/90 text-white border-red-400 animate-pulse`}>{status.text}</div>;
   if (status.type === 'urgent') return <div className={`${baseClasses} bg-amber-500/90 text-white border-amber-400`}>{status.text}</div>;
@@ -114,21 +112,21 @@ const Events = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [mapCenter, setMapCenter] = useState([6.5244, 3.3792]);
-  
+
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
   const categories = ['All', 'Technology', 'Music', 'Business', 'Networking', 'Startups', 'Education', 'Design'];
-  
-  const glassStyle = darkMode 
-    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl' 
+
+  const glassStyle = darkMode
+    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl'
     : 'bg-white/60 border-white/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.08)]';
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -136,9 +134,9 @@ const Events = ({ darkMode }) => {
   const lastEventElementRef = useCallback(node => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
-    
+
     observer.current = new IntersectionObserver(entries => {
-      // Only paginate if we're not doing a heavy geo-search right now
+
       if (entries[0].isIntersecting && hasMore && !searchCity) {
         setPage(prev => prev + 1);
       }
@@ -187,9 +185,9 @@ const Events = ({ darkMode }) => {
         setMapCenter([lat, lng]);
         const res = await api.get(`/events?lat=${lat}&lng=${lng}&radius=50&limit=100`);
         setEvents(res.data?.data || []);
-        setHasMore(false); // Disable infinite scroll during map mode
+        setHasMore(false);
       } else { alert("City not found."); }
-    } catch (err) { console.error("Map search failed", err); } 
+    } catch (err) { console.error("Map search failed", err); }
     finally { setIsSearchingLocation(false); }
   };
 
@@ -218,10 +216,10 @@ const Events = ({ darkMode }) => {
   const handleLikeEvent = async (e, eventId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!user) return; // Optional: Add a login prompt here
-    
+    if (!user) return;
+
     const currentUserId = String(user._id || user.id);
-    // Optimistic UI Update
+
     setEvents(prev => prev.map(ev => {
       if ((ev._id || ev.id) === eventId) {
         const isLiked = Array.isArray(ev.likes) && ev.likes.some(id => String(id?._id || id) === currentUserId);
@@ -240,12 +238,12 @@ const Events = ({ darkMode }) => {
     }
   };
 
-  const filteredEvents = events.filter(ev => 
+  const filteredEvents = events.filter(ev =>
     ev.title.toLowerCase().includes(debouncedQuery.toLowerCase())
   );
 
   return (
-    <Motion.main 
+    <Motion.main
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="pt-28 pb-20 px-4 md:px-8 max-w-7xl mx-auto"
     >
@@ -267,13 +265,13 @@ const Events = ({ darkMode }) => {
         </button>
         {searchCity && <button type="button" onClick={() => { setSearchCity(''); setPage(1); }} className={`px-4 py-3.5 rounded-2xl font-bold transition border ${darkMode ? 'border-slate-700 text-white hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'}`}><X size={18} /></button>}
       </form>
- 
+
       <div className={`sticky top-24 z-20 max-w-4xl mx-auto p-2 rounded-full border mb-10 flex flex-col md:flex-row gap-2 ${glassStyle}`}>
         <div className="relative flex-1 group">
           <Search size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-400 group-focus-within:text-blue-400' : 'text-slate-400 group-focus-within:text-blue-600'}`} />
-          <input 
-            type="text" 
-            placeholder="Search events, meetups..." 
+          <input
+            type="text"
+            placeholder="Search events, meetups..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={`w-full bg-transparent border-none focus:outline-none pl-12 pr-5 py-3.5 text-sm font-bold transition-all rounded-full focus:ring-2 focus:ring-blue-500/20 ${darkMode ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
@@ -286,8 +284,8 @@ const Events = ({ darkMode }) => {
               key={cat}
               onClick={() => handleCategoryChange(cat)}
               className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                activeCategory === cat 
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' 
+                activeCategory === cat
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : `bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 opacity-100 hover:opacity-100 ${darkMode ? 'text-white' : 'text-slate-700'}`
               }`}
             >
@@ -298,11 +296,11 @@ const Events = ({ darkMode }) => {
       </div>
 
       <div className="relative">
-        {/* Interactive Map View */}
+        {}
         <div className={`h-80 w-full rounded-[2.5rem] overflow-hidden border shadow-xl mb-12 z-0 relative ${darkMode ? 'border-slate-700 bg-slate-900 [&_.leaflet-container]:invert [&_.leaflet-container]:hue-rotate-180 [&_.leaflet-container]:brightness-90' : 'border-slate-200 bg-white'}`}>
           <MapContainer key={events.length + '-' + mapCenter.join(',')} center={mapCenter} zoom={12} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 1 }}>
             <TileLayer attribution={`&copy; <a href="https://www.openstreetmap.org/copyright" ${darkMode ? 'style="color: #94a3b8;"' : ''}>OpenStreetMap</a> contributors`} url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <MarkerClusterGroup 
+            <MarkerClusterGroup
               chunkedLoading
               zoomToBoundsOnClick={false}
               iconCreateFunction={createClusterCustomIcon}
@@ -348,7 +346,7 @@ const Events = ({ darkMode }) => {
 
         {!isAuthenticated && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/30 dark:bg-slate-900/30 backdrop-blur-md rounded-[2.5rem]">
-            <Motion.div 
+            <Motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
               className={`p-8 rounded-[2rem] border text-center max-w-sm w-full mx-4 shadow-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-blue-50'}`}
             >
@@ -380,7 +378,7 @@ const Events = ({ darkMode }) => {
             ))}
           </div>
         ) : events.length === 0 && !loading ? (
-          <Motion.div 
+          <Motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`py-16 px-6 text-center rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center ${darkMode ? 'border-slate-700 bg-slate-800/20' : 'border-slate-200 bg-slate-50'}`}
@@ -390,11 +388,11 @@ const Events = ({ darkMode }) => {
             </div>
             <h3 className={`text-xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>No events found</h3>
             <p className={`text-sm font-medium max-w-sm mb-8 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
-              {searchQuery 
-                ? `We couldn't find any events matching "${searchQuery}". Try adjusting your filters or search terms.` 
+              {searchQuery
+                ? `We couldn't find any events matching "${searchQuery}". Try adjusting your filters or search terms.`
                 : `We couldn't find any events in this category. Try adjusting your filters.`}
             </p>
-            <button 
+            <button
               onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}
               className="px-8 py-3.5 rounded-2xl text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
             >
@@ -426,8 +424,8 @@ const Events = ({ darkMode }) => {
                     <div className="absolute top-4 left-4 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider text-white border border-white/20">
                       {event.category || 'General'}
                     </div>
-                    <button 
-                      onClick={(e) => handleLikeEvent(e, event._id || event.id)} 
+                    <button
+                      onClick={(e) => handleLikeEvent(e, event._id || event.id)}
                     className={`absolute top-4 right-4 p-2.5 backdrop-blur-md rounded-full border transition-colors z-10 ${Array.isArray(event.likes) && event.likes.some(id => String(id?._id || id) === String(user?._id || user?.id)) ? 'bg-red-500 border-red-500 text-white' : 'bg-white/20 border-white/20 text-white hover:bg-red-500 hover:border-red-500'}`}
                     >
                     <Heart size={16} className={Array.isArray(event.likes) && event.likes.some(id => String(id?._id || id) === String(user?._id || user?.id)) ? 'fill-current' : ''} />

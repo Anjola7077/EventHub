@@ -13,17 +13,17 @@ const ForgotPassword = ({ darkMode }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
-    
+
     setIsLoading(true);
     setError('');
     setMessage('');
-    
+
     try {
-      // Assuming your backend has an endpoint to handle password resets
+
       const res = await api.post('/auth/forgot-password', { email });
       console.log("Forgot Password Response:", res.data);
       setMessage(res.data?.message || "If an account exists, a password reset link has been sent.");
-      setEmail(''); // Clear the input after success
+      setEmail('');
     } catch (err) {
       console.error("Forgot Password Error:", err);
       setError(err.response?.data?.error || "Failed to process request. Please try again.");
@@ -33,9 +33,9 @@ const ForgotPassword = ({ darkMode }) => {
   };
 
   return (
-    <Motion.main 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
+    <Motion.main
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       className="min-h-screen flex items-center justify-center px-4 pt-20"
     >
@@ -49,32 +49,32 @@ const ForgotPassword = ({ darkMode }) => {
             Enter your email address and we'll send you a link to reset your password.
           </p>
         </div>
-        
+
         {error && <div className="mb-6 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold text-center border border-red-500/20">{error}</div>}
         {message && <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-bold text-center border border-emerald-500/20">{message}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="relative">
             <Mail size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40'}`} />
-            <input 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              placeholder="Email Address" 
-              required 
-              className={`w-full pl-12 pr-4 py-3.5 rounded-2xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${darkMode ? 'bg-slate-900/50 border-slate-700 text-white placeholder-slate-400' : 'bg-white/50 border-white text-slate-900'}`} 
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email Address"
+              required
+              className={`w-full pl-12 pr-4 py-3.5 rounded-2xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${darkMode ? 'bg-slate-900/50 border-slate-700 text-white placeholder-slate-400' : 'bg-white/50 border-white text-slate-900'}`}
             />
           </div>
-          
-          <button 
-            type="submit" 
-            disabled={isLoading || !email} 
+
+          <button
+            type="submit"
+            disabled={isLoading || !email}
             className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black tracking-wide shadow-xl shadow-blue-600/30 transition-all flex justify-center items-center h-14 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Send Reset Link"}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center">
           <Link to="/login" className={`inline-flex items-center gap-2 text-sm font-bold hover:underline transition-colors ${darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'}`}>
             <ArrowLeft size={16} /> Back to Login

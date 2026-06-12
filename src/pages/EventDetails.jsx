@@ -26,9 +26,9 @@ const formatTime12h = (timeStr) => {
 
 const formatEventDateTime = (startDate, startTime, endDate, endTime) => {
   if (!startDate) return 'Date TBA';
-  
-  const start = new Date(startDate).toLocaleDateString('en-US', { 
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+
+  const start = new Date(startDate).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
   });
   const startT = formatTime12h(startTime);
   const endT = formatTime12h(endTime);
@@ -36,10 +36,10 @@ const formatEventDateTime = (startDate, startTime, endDate, endTime) => {
 
   if (!endDate) return startFormatted;
 
-  const end = new Date(endDate).toLocaleDateString('en-US', { 
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+  const end = new Date(endDate).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
   });
-  
+
   if (start === end && !endT) {
     return startFormatted;
   } else if (start === end) {
@@ -78,8 +78,7 @@ const EventDetails = ({ darkMode }) => {
         setError(null);
         const res = await api.get(`/events/${eventId}`);
         setEvent(res.data.data);
-        
-        // Safely check if the user's ID is in the event's likes array (even if populated)
+
         const currentUserId = String(user?._id || user?.id || '');
         if (user && Array.isArray(res.data.data.likes) && res.data.data.likes.some(like => String(like?._id || like) === currentUserId)) {
           setIsLiked(true);
@@ -96,7 +95,7 @@ const EventDetails = ({ darkMode }) => {
         const res = await api.get(`/events/${eventId}/messages/unread`);
         setUnreadCount(res.data?.count || res.data?.data?.count || 0);
       } catch (error) {
-        // Silently fail if endpoint isn't set up yet
+
       }
     };
 
@@ -106,7 +105,6 @@ const EventDetails = ({ darkMode }) => {
     }
   }, [eventId, user]);
 
-  // Countdown timer for registered users
   useEffect(() => {
     if (!event?.date) return;
 
@@ -162,7 +160,7 @@ const EventDetails = ({ darkMode }) => {
       let config = {};
 
       const dataToSubmit = { ...editForm };
-      delete dataToSubmit.coverImage; // Avoid sending old URL
+      delete dataToSubmit.coverImage;
 
       if (editingCoverImage) {
         const formData = new FormData();
@@ -187,7 +185,7 @@ const EventDetails = ({ darkMode }) => {
       }
 
       const res = await api.put(`/events/${event._id || event.id}`, payload, config);
-      
+
       setEvent(prev => ({ ...prev, ...res.data.data }));
       setIsEditing(false);
       setEditingCoverImage(null);
@@ -216,7 +214,7 @@ const EventDetails = ({ darkMode }) => {
       console.error("Delete failed", error);
       showToast("Failed to delete event.", "error");
     }
-    // No finally block for isSaving, as we navigate away on success.
+
   };
 
   const handleShare = async () => {
@@ -241,21 +239,19 @@ const EventDetails = ({ darkMode }) => {
       showToast("Please log in to like this event.", "error");
       return;
     }
-    
-    // Optimistic UI update: Toggle instantly so it feels fast!
+
     setIsLiked(prev => !prev);
-    
+
     try {
-      // Assuming your backend has an endpoint to toggle the like status
+
       await api.post(`/events/${eventId}/like`);
     } catch (error) {
-      // Revert the toggle if the API request fails
+
       setIsLiked(prev => !prev);
       showToast("Failed to update like status.", "error");
       console.error("Failed to toggle like:", error);
     }
   };
-
 
   const handleAddToCalendar = () => {
     if (!event) return;
@@ -272,15 +268,14 @@ const EventDetails = ({ darkMode }) => {
     const startDate = new Date(event.date);
     const formatICSDate = (date) => date.toISOString().replace(/-|:|\.\d\d\d/g, '');
     const startString = formatICSDate(startDate);
-    
-    // Use end date or default to a 1 hour duration if no end time is specified
+
     const endDate = event.endDate ? new Date(event.endDate) : new Date(startDate.getTime() + 60 * 60 * 1000);
     const endString = formatICSDate(endDate);
 
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//EventHub//EN',
+      'PRODID:-
       'CALSCALE:GREGORIAN',
       'BEGIN:VEVENT',
       `UID:${event._id || event.id}@eventhub.com`,
@@ -293,7 +288,7 @@ const EventDetails = ({ darkMode }) => {
       'STATUS:CONFIRMED',
       'END:VEVENT',
       'END:VCALENDAR'
-    ].join('\r\n'); // iCalendar specification requires CRLF line endings
+    ].join('\r\n');
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -350,7 +345,6 @@ const EventDetails = ({ darkMode }) => {
 
   const isSoldOut = event.capacity && (event.ticketsSold || 0) >= event.capacity;
 
-  // Check if user has access to chat
   const currentUserId = String(user?._id || user?.id || '');
   const isOrganizer = event && (String(event.organizer?._id || event.organizer || '') === currentUserId || String(event.creator?._id || event.creator || '') === currentUserId);
   const isApprovedAttendee = event?.attendees?.some(attendee => {
@@ -394,9 +388,9 @@ const EventDetails = ({ darkMode }) => {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <Motion.button 
+                <Motion.button
                   whileTap={{ scale: 0.85 }}
-                  onClick={handleLike} 
+                  onClick={handleLike}
                   className="rounded-full border border-white/20 bg-white/10 p-3 text-white transition hover:bg-white/20"
                 >
                   <Motion.div animate={isLiked ? { scale: [1, 1.3, 1] } : { scale: 1 }} transition={{ duration: 0.3 }}>
@@ -407,7 +401,7 @@ const EventDetails = ({ darkMode }) => {
                   <Share2 size={18} />
                 </button>
                 {user && (event.creator?._id === user._id || event.organizer?._id === user._id) && (
-                  <button 
+                  <button
                     onClick={() => { setEditForm(event); setIsEditing(true); }}
                     className="rounded-full border border-white/20 bg-white/10 p-3 text-white transition hover:bg-white/20"
                   >
@@ -439,13 +433,13 @@ const EventDetails = ({ darkMode }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_0.95fr] gap-8">
           <div className="space-y-8">
-            <section className={`rounded-[2rem] border ${glassStyle} p-8`}> 
+            <section className={`rounded-[2rem] border ${glassStyle} p-8`}>
               <h2 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>About this event</h2>
               <p className={`text-sm font-medium leading-relaxed mb-6 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
                 {event.description}
               </p>
             </section>
-            
+
             {(() => {
               const organizer = event.organizer || event.creator;
               if (!organizer) return null;
@@ -462,9 +456,9 @@ const EventDetails = ({ darkMode }) => {
               );
             })()}
           </div>
-          
+
           <div className="space-y-6">
-            <div className={`rounded-[2rem] border ${glassStyle} p-6`}> 
+            <div className={`rounded-[2rem] border ${glassStyle} p-6`}>
               <h3 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                 {event.price === 0 ? 'Free' : `₦${event.price}`}
               </h3>
@@ -497,7 +491,7 @@ const EventDetails = ({ darkMode }) => {
                   </div>
                 </div>
               )}
-              
+
               {isRegisteredOrOrganizer ? (
                 <div className={`w-full p-4 rounded-2xl border-2 border-dashed text-center ${darkMode ? 'bg-slate-800/50 border-slate-600' : 'bg-blue-50 border-blue-200'}`}>
                   <div className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
@@ -550,8 +544,8 @@ const EventDetails = ({ darkMode }) => {
                   )}
                 </div>
               ) : (
-                <Link 
-                  to={isSoldOut ? '#' : `/event-registration/${eventId}`} 
+                <Link
+                  to={isSoldOut ? '#' : `/event-registration/${eventId}`}
                   className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-black text-white shadow-lg transition-all ${isSoldOut ? 'bg-slate-500 cursor-not-allowed shadow-none pointer-events-none' : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-blue-600/20 hover:shadow-blue-500/40 hover:-translate-y-0.5'}`}
                 >
                   {isSoldOut ? 'Sold Out' : 'Register & Upload Receipt'}
@@ -559,22 +553,22 @@ const EventDetails = ({ darkMode }) => {
               )}
 
               <div className="grid grid-cols-2 gap-3 mt-3">
-                <button 
+                <button
                   onClick={handleAddToCalendar}
                   className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-black transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
                 >
                   <CalendarPlus size={18} /> Google Cal
                 </button>
-                <button 
+                <button
                   onClick={handleDownloadICS}
                   className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-black transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
                 >
                   <CalendarPlus size={18} /> Apple/Outlook
                 </button>
               </div>
-              
+
               {hasChatAccess && (
-                <Link 
+                <Link
                   to={`/chat/${eventId}`}
                   className={`mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-4 text-sm font-black transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
                 >
@@ -593,18 +587,18 @@ const EventDetails = ({ darkMode }) => {
             </div>
 
             {event.location?.coordinates && (
-              <div className={`rounded-[2rem] border ${glassStyle} p-6`}> 
+              <div className={`rounded-[2rem] border ${glassStyle} p-6`}>
                 <h3 className={`text-lg font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Event Location</h3>
               <div className={`w-full h-64 rounded-xl overflow-hidden relative shadow-inner ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-100'}`}>
-                <MapContainer 
-                  center={[event.location.coordinates[1], event.location.coordinates[0]]} 
-                  zoom={14} 
-                  scrollWheelZoom={false} 
+                <MapContainer
+                  center={[event.location.coordinates[1], event.location.coordinates[0]]}
+                  zoom={14}
+                  scrollWheelZoom={false}
                   style={{ height: '100%', width: '100%', zIndex: 1 }}
                 >
-                  <TileLayer 
-                    attribution='&copy; OpenStreetMap' 
-                    url={darkMode ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'} 
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap'
+                    url={darkMode ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
                   />
                   <Marker position={[event.location.coordinates[1], event.location.coordinates[0]]} icon={animatedMarkerIcon}>
                     <Popup className="rounded-xl">
@@ -616,7 +610,7 @@ const EventDetails = ({ darkMode }) => {
                   </Marker>
                 </MapContainer>
                 </div>
-                <a 
+                <a
                   href={`https://www.google.com/maps/dir/?api=1&destination=${event.location.coordinates[1]},${event.location.coordinates[0]}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -641,7 +635,7 @@ const EventDetails = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Quick Edit Modal */}
+      {}
       <AnimatePresence>
         {isEditing && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -659,85 +653,9 @@ const EventDetails = ({ darkMode }) => {
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
                 <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 bg-slate-50'}`}>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditingCoverImage(e.target.files[0])} />
-                  <img src={editingCoverImage ? URL.createObjectURL(editingCoverImage) : (editForm.coverImage || '/placeholder.png')} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="relative z-10 bg-black/40 backdrop-blur-sm p-2 rounded-lg inline-block">
-                    <ImageIcon size={24} className="text-white mx-auto mb-2" />
-                    <p className="text-xs font-bold text-white">Click to change cover image</p>
-                  </div>
-                </label>
-                <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Event Title</label>
-                  <input type="text" value={editForm.title || ''} onChange={e => setEditForm({...editForm, title: e.target.value})} className={inputStyle} required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Date</label>
-                    <input type="date" value={editForm.date ? editForm.date.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className={inputStyle} required />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Time</label>
-                    <input type="time" value={editForm.time || ''} onChange={e => setEditForm({...editForm, time: e.target.value})} className={inputStyle} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
-                    <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className={inputStyle} />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
-                    <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({...editForm, endTime: e.target.value})} className={inputStyle} />
-                  </div>
-                </div>
-                <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Location</label>
-                  <input type="text" value={typeof editForm.location === 'object' ? editForm.location?.formattedAddress : (editForm.location || '')} onChange={e => setEditForm({...editForm, location: e.target.value})} className={inputStyle} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Price (₦)</label>
-                    <input type="number" value={editForm.price || 0} onChange={e => setEditForm({...editForm, price: e.target.value})} className={inputStyle} />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Capacity</label>
-                    <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className={inputStyle} placeholder="Unlimited" />
-                  </div>
-                </div>
-                {Number(editForm.price) > 0 && (
-                  <div className={`mt-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Landmark size={16} className="text-emerald-500" />
-                      <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Bank Name</label>
-                        <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} className={inputStyle} placeholder="e.g., GTBank" />
-                      </div>
-                      <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Number</label>
-                        <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({...editForm, accountNumber: e.target.value})} className={inputStyle} placeholder="e.g., 0123456789" />
-                      </div>
-                      <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Name</label>
-                        <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({...editForm, accountName: e.target.value})} className={inputStyle} placeholder="e.g., John Doe" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>Cancel</button>
-                  <button type="button" onClick={handleDeleteEvent} disabled={isSaving || !hasHappened} title={!hasHappened ? "Events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>Delete</button>
-                  <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">{isSaving ? 'Saving...' : 'Save'}</button>
-                </div>
-              </form>
-            </Motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  <input type="file" accept="image
 
-      {/* Delete Confirmation Modal */}
+}
       <AnimatePresence>
         {showEventDeleteConfirm && (
           <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

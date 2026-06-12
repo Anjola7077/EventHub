@@ -15,7 +15,7 @@ const Home = ({ darkMode }) => {
   const isAuthenticated = Boolean(user);
 
   useEffect(() => {
-    // Safely suppress benign ResizeObserver errors that trigger Vercel's crash overlay on window resize
+
     const handleResizeError = (e) => {
       if (e.message === 'ResizeObserver loop limit exceeded' || e.message === 'ResizeObserver loop completed with undelivered notifications.') {
         e.stopImmediatePropagation();
@@ -42,7 +42,7 @@ const Home = ({ darkMode }) => {
     const fetchNotifications = async () => {
       if (!user) return;
       try {
-        // Fetch real notifications from your backend
+
         const res = await api.get('/users/notifications');
         if (res.data?.data && res.data.data.length > 0) {
           setActivities(res.data.data);
@@ -59,16 +59,15 @@ const Home = ({ darkMode }) => {
       alert('Push notifications are not supported by your browser.');
       return;
     }
-    
+
     try {
       const permission = await Notification.requestPermission();
       setPushPermission(permission);
-      
+
       if (permission === 'granted') {
-        // 1. Register the Service Worker
+
         const registration = await navigator.serviceWorker.register('/sw.js');
 
-        // 2. Convert VAPID key for the PushManager
         const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
         const urlBase64ToUint8Array = (base64String) => {
           const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -79,13 +78,11 @@ const Home = ({ darkMode }) => {
           return outputArray;
         };
 
-        // 3. Subscribe the user's browser
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
         });
 
-        // 4. Send the subscription to your backend to save to the user's database document
         await api.post('/notifications/subscribe', subscription);
 
         new Notification("Notifications Enabled!", {
@@ -98,7 +95,6 @@ const Home = ({ darkMode }) => {
     }
   };
 
-  // Function to format time into "X ago"
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -122,7 +118,7 @@ const Home = ({ darkMode }) => {
   const handleIndividualNotificationClick = async (notificationId, url) => {
     try {
       await api.put(`/notifications/${notificationId}/read`);
-      setActivities(prevActivities => prevActivities.map(notif => 
+      setActivities(prevActivities => prevActivities.map(notif =>
         notif.id === notificationId ? { ...notif, read: true } : notif
       ));
       if (setUnreadCount) setUnreadCount(prev => Math.max(0, prev - 1));
@@ -134,7 +130,7 @@ const Home = ({ darkMode }) => {
   const handleMarkAllAsRead = async () => {
     try {
       await api.put('/notifications/mark-all-read');
-      // Update local state to reflect changes without refetching
+
       setActivities(prevActivities =>
         prevActivities.map(activity => ({ ...activity, read: true }))
       );
@@ -153,13 +149,13 @@ const Home = ({ darkMode }) => {
 
   return (
     <Motion.main
-      initial={{ opacity: 0, y: 15, filter: 'blur(8px)' }} 
-      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} 
+      initial={{ opacity: 0, y: 15, filter: 'blur(8px)' }}
+      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
       exit={{ opacity: 0, y: -15, filter: 'blur(8px)' }}
       transition={{ duration: 0.7, ease: 'easeOut' }}
       className={`pt-32 pb-20 px-4 md:px-8 min-h-screen ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}
     >
-      {/* Floating Notification Button */}
+      {}
       <div className="fixed bottom-6 right-6 z-50" ref={notificationRef}>
         <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors">
           <Bell size={24} />
@@ -170,7 +166,7 @@ const Home = ({ darkMode }) => {
           )}
         </button>
 
-        {/* Notification Popup */}
+        {}
         <AnimatePresence>
           {showNotifications && (
             <Motion.div
@@ -183,16 +179,16 @@ const Home = ({ darkMode }) => {
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
                   <h3 className="text-lg font-bold">Notifications</h3>
                   <div className="flex items-center gap-3">
-                    {unreadCount > 0 && ( // Only show if there are unread notifications
-                      <button 
-                        onClick={handleMarkAllAsRead} 
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllAsRead}
                         className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                       >
                         Mark All Read
                       </button>
                     )}
-                    <button 
-                      onClick={() => setShowNotifications(false)} 
+                    <button
+                      onClick={() => setShowNotifications(false)}
                       className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700">
                       <X size={20} />
                     </button>
@@ -223,7 +219,7 @@ const Home = ({ darkMode }) => {
                             {activity.type === 'new_message' && <Users size={18} className={`${activity.read ? 'text-emerald-300' : 'text-emerald-500'}`} />}
                             {activity.type === 'rsvp_alert' && <Ticket size={18} className={`${activity.read ? 'text-purple-300' : 'text-purple-500'}`} />}
                             {activity.type === 'event_reminder' && <Bell size={18} className={`${activity.read ? 'text-amber-300' : 'text-amber-500'}`} />}
-                            {activity.type === 'system' && <Users size={18} className={`${activity.read ? 'text-gray-300' : 'text-gray-500'}`} />} {/* Generic icon for system, adjust as needed */}
+                            {activity.type === 'system' && <Users size={18} className={`${activity.read ? 'text-gray-300' : 'text-gray-500'}`} />} {}
                           </div>
                           <div>
                             <p className={`text-sm font-medium leading-tight ${activity.read ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>{activity.message}</p>

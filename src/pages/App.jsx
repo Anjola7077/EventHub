@@ -42,8 +42,8 @@ const AppContent = () => {
 
   return (
     <div className={`min-h-screen w-full transition-colors duration-700 relative overflow-x-hidden ${
-      darkMode 
-        ? 'dark bg-slate-900 text-slate-100' 
+      darkMode
+        ? 'dark bg-slate-900 text-slate-100'
         : 'bg-white text-[#0a1f6e]'
     }`}>
       <BackgroundParticles darkMode={darkMode} />
@@ -63,53 +63,53 @@ const AppContent = () => {
             <Route path="/forgot-password" element={<ForgotPassword darkMode={darkMode} />} />
             <Route path="/reset-password/:token" element={<ResetPassword darkMode={darkMode} />} />
 
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <EventDashboard darkMode={darkMode} />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/dashboard/:eventId" 
+            <Route
+              path="/dashboard/:eventId"
               element={
                 <ProtectedRoute>
                   <EventDashboard darkMode={darkMode} />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/create-event" 
+            <Route
+              path="/create-event"
               element={
                 <ProtectedRoute>
                   <CreateEvent darkMode={darkMode} />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/event-registration/:eventId" 
+            <Route
+              path="/event-registration/:eventId"
               element={
                 <ProtectedRoute>
                   <EventRegistration darkMode={darkMode} />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/chat/:eventId" 
+            <Route
+              path="/chat/:eventId"
               element={
                 <ProtectedRoute>
                   <Chat darkMode={darkMode} />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/profile" 
+            <Route
+              path="/profile"
               element={
                 <ProtectedRoute>
                   <Profile darkMode={darkMode} />
                 </ProtectedRoute>
-              } 
+              }
             />
           </Routes>
         </AnimatePresence>

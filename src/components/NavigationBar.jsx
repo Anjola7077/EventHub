@@ -13,7 +13,7 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
   const location = useLocation();
   const { scrollY } = useScroll();
   const navScale = useTransform(scrollY, [0, 100], [1, 0.95]);
-  
+
   const { user, unreadCount } = useContext(AuthContext);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // On mobile, ignore outside clicks so only the cancel button closes the drawer
+
       if (isMobile && isOpen) return;
 
       if (navRef.current && !navRef.current.contains(event.target)) {
@@ -86,7 +86,7 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
               )}
             </AnimatePresence>
           </div>
-          
+
           <AnimatePresence>
             {!isMobile && (
               <Motion.div
@@ -132,10 +132,10 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
               </Motion.div>
             )}
           </AnimatePresence>
-  
+
           <div className="flex items-center gap-2 md:gap-3 shrink-0 ml-auto">
             {!isMobile && <InstallAppButton darkMode={darkMode} />}
-            
+
             <AnimatePresence mode="popLayout">
               {!isMobile ? (
                 <Motion.button
@@ -148,10 +148,10 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
                   {darkMode ? <Sun size={18} /> : <Moon size={18} />}
                 </Motion.button>
               ) : (
-                <Motion.div 
+                <Motion.div
                   key="menu-toggle"
                   onClick={(e) => { e.stopPropagation(); setIsOpen(true); }}
-                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} 
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                   className={`p-2 rounded-full cursor-pointer shrink-0 ${darkMode ? 'bg-slate-700 text-white' : 'bg-blue-100 text-blue-600'}`}
                 >
                   <Menu size={18} />
@@ -162,7 +162,7 @@ const NavigationBar = ({ darkMode, setDarkMode }) => {
         </Motion.nav>
       </div>
 
-      {/* Mobile Right-Side Drawer */}
+      {}
       <AnimatePresence>
         {isMobile && isOpen && (
           <>

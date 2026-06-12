@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // Instantly apply the theme to prevent a white flash during the loading state
+
     try {
       const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
       if (isDark) {
@@ -25,10 +25,9 @@ export const AuthProvider = ({ children }) => {
       console.warn('Failed to apply theme:', error.message);
     }
 
-    // Check if user is already logged in on load
     const checkAuth = async () => {
       try {
-        const res = await api.get('/auth/me'); // Adjust to match your backend endpoint
+        const res = await api.get('/auth/me');
         setUser(res.data?.data || res.data?.user || res.data);
       } catch (error) {
         console.warn('Auth check failed (this is normal if backend is not running):', error.message);
@@ -38,13 +37,11 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    // Add a small delay to prevent rapid re-renders
     const timeoutId = setTimeout(checkAuth, 100);
 
     return () => clearTimeout(timeoutId);
-  }, []); // Run ONLY once on mount!
+  }, []);
 
-  // Fetch initial unread notification count when user becomes available
   useEffect(() => {
     if (user && !loading) {
       api.get('/users/notifications')
@@ -57,17 +54,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user, loading]);
 
-  // Global Socket.io listener for real-time personal notifications
   useEffect(() => {
     let socket;
     if (user && !loading) {
       const socketUrl = api.defaults.baseURL ? api.defaults.baseURL.replace('/api/v1', '') : 'http://localhost:5000';
 
-      // Get the token from localStorage or fallback to cookies
       const getToken = () => {
         const localToken = localStorage.getItem('token');
         if (localToken) return localToken;
-        
+
         const cookies = document.cookie.split(';');
         const tokenCookie = cookies.find(c => c.trim().startsWith('token='));
         return tokenCookie ? tokenCookie.split('=')[1] : null;
@@ -81,7 +76,7 @@ export const AuthProvider = ({ children }) => {
           auth: {
             token: token
           },
-          timeout: 5000, // 5 second connection timeout
+          timeout: 5000,
           reconnection: true,
           reconnectionAttempts: 3,
           reconnectionDelay: 1000
@@ -92,31 +87,29 @@ export const AuthProvider = ({ children }) => {
         });
 
         socket.on('notification', (data) => {
-          // Don't pop a toast if the user is currently actively viewing the page the notification links to
+
           if (data.url && window.location.pathname === data.url) return;
-          // Show the incoming notification as a toast and hide after 5s
+
           setToast({ message: data.message, url: data.url });
           setUnreadCount(prev => prev + 1);
           setTimeout(() => setToast(null), 5000);
 
-          // Trigger OS-level System Notification if permitted
           if (window.Notification?.permission === 'granted') {
-            // Show if the app is in the background, OR if it's an important mention/announcement
+
             if (document.visibilityState !== 'visible' || !document.hasFocus() || data.type === 'mention' || data.type === 'system') {
               const notifOptions = {
                 body: data.message,
                 icon: '/logo.png'
               };
-              
-              // Group similar notifications using the `tag` property so they overwrite each other instead of spamming
+
               if (data.type === 'new_message') notifOptions.tag = 'chat_messages';
               if (data.type === 'mention') notifOptions.tag = 'chat_mentions';
               if (data.type === 'system') notifOptions.tag = 'system_alerts';
 
               const sysNotif = new window.Notification(data.title || 'EventHub Notification', notifOptions);
-              if (data.url) sysNotif.onclick = () => { 
-                window.focus(); 
-                window.location.href = data.url; 
+              if (data.url) sysNotif.onclick = () => {
+                window.focus();
+                window.location.href = data.url;
               };
             }
           }
@@ -161,7 +154,7 @@ export const AuthProvider = ({ children }) => {
       {!loading ? (
         <>
           {children}
-          {/* Global Real-Time Notification Toast */}
+          {}
           <AnimatePresence>
             {toast && (
               <Motion.div

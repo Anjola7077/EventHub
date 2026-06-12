@@ -74,10 +74,10 @@ const EventDashboard = ({ darkMode }) => {
     if (node) observer.current.observe(node);
   }, [visibleCount, filteredAttendees.length]);
 
-  const glassStyle = darkMode 
-    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]' 
+  const glassStyle = darkMode
+    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]'
     : 'bg-white/40 border-white/40 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.1)]';
-    
+
   const inputStyle = `w-full px-5 py-3.5 rounded-2xl text-sm font-medium border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${darkMode ? 'bg-slate-900/50 border-slate-700 focus:border-blue-500 focus:bg-slate-900 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400'}`;
 
   const fetchEventStats = async () => {
@@ -136,11 +136,11 @@ const EventDashboard = ({ darkMode }) => {
   }, [eventId, user]);
 
   useEffect(() => {
-    setVisibleCount(10); // Reset to 10 whenever the user switches events
+    setVisibleCount(10);
   }, [eventId]);
 
   useEffect(() => {
-    setVisibleCount(10); // Reset to 10 when search query changes
+    setVisibleCount(10);
   }, [attendeeSearch]);
 
   const handleEventChange = (e) => {
@@ -149,14 +149,14 @@ const EventDashboard = ({ darkMode }) => {
 
   const handleExportCSV = () => {
     if (!attendees.length) return alert("No attendees to export");
-    
+
     let csvContent = "data:text/csv;charset=utf-8,Name,Email,Ticket,Status\n";
     attendees.forEach(row => {
       const name = row.user?.fullName || row.fullName || 'Unknown';
       const email = row.user?.email || row.email || 'Unknown';
       csvContent += `${name},${email},${row.type || row.ticketType || 'Standard'},${row.isVerified !== false ? 'Paid' : 'Pending'}\n`;
     });
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -181,14 +181,14 @@ const EventDashboard = ({ darkMode }) => {
     if (startY > 0 && window.scrollY === 0) {
       const currentY = e.touches[0].clientY;
       const distance = currentY - startY;
-      if (distance > 0) setPullDistance(Math.min(distance * 0.4, 80)); // Adds natural drag resistance
+      if (distance > 0) setPullDistance(Math.min(distance * 0.4, 80));
     }
   };
 
   const handleTouchEnd = async () => {
     if (pullDistance > 60) {
       setIsRefreshing(true);
-      setPullDistance(60); // Hold open during loading
+      setPullDistance(60);
       await fetchEventStats();
       setIsRefreshing(false);
     }
@@ -253,11 +253,11 @@ const EventDashboard = ({ darkMode }) => {
       }
 
       const res = await api.put(`/events/${eventData._id || eventData.id}`, payload, config);
-      
+
       setEventData(prev => ({ ...prev, ...res.data.data }));
       setIsEditing(false);
       setEditingCoverImage(null);
-      fetchEventStats(); // refresh full stats just in case
+      fetchEventStats();
     } catch (error) {
       console.error("Edit failed", error);
       alert("Failed to update event.");
@@ -282,7 +282,7 @@ const EventDashboard = ({ darkMode }) => {
       console.error("Delete failed", error);
       alert("Failed to delete event.");
     }
-    // No finally block for isSaving, as we navigate away on success.
+
   };
 
   const handleBroadcastSubmit = async (e) => {
@@ -323,7 +323,6 @@ const EventDashboard = ({ darkMode }) => {
     { title: 'Revenue', value: `₦${(eventData.isOverview ? (eventData.totalRevenue || 0) : ((eventData.ticketsSold || 0) * (eventData.price || 0))).toLocaleString()}`, icon: CreditCard, color: 'text-purple-500', bg: 'bg-purple-500/20' },
   ];
 
-  // Group attendees by ticket type for the Doughnut chart
   const ticketTypes = attendees.reduce((acc, curr) => {
     if (!curr) return acc;
     const type = curr.type || curr.ticketType || 'Standard';
@@ -350,7 +349,6 @@ const EventDashboard = ({ darkMode }) => {
     cutout: '75%',
   };
 
-  // Determine days to show based on selected timeRange
   let daysToShow = parseInt(timeRange, 10) || 7;
   if (timeRange === 'all') {
     let earliestTime = Date.now();
@@ -368,9 +366,8 @@ const EventDashboard = ({ darkMode }) => {
     daysToShow = Math.max(7, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
   }
   if (isNaN(daysToShow) || daysToShow < 1) daysToShow = 7;
-  daysToShow = Math.min(daysToShow, 365); // Cap to 1 year to prevent rendering loop crashes
+  daysToShow = Math.min(daysToShow, 365);
 
-  // Generate real day-by-day sales data from the attendees list
   const dateRangeArray = Array.from({ length: daysToShow }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (daysToShow - 1 - i));
@@ -379,8 +376,7 @@ const EventDashboard = ({ darkMode }) => {
   });
 
   const lineLabels = dateRangeArray.map(d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
-  
-  // Start the cumulative total with anyone who registered BEFORE the window
+
   let runningTotal = attendees.filter(att => {
     let d = new Date(att.createdAt || att.date || Date.now());
     if (isNaN(d.getTime())) d = new Date();
@@ -390,8 +386,7 @@ const EventDashboard = ({ darkMode }) => {
   const realSalesData = dateRangeArray.map((day) => {
     const nextDay = new Date(day);
     nextDay.setDate(nextDay.getDate() + 1);
-    
-    // Count how many people registered on this specific day
+
     const salesToday = attendees.filter(att => {
       if (!att) return false;
       let date = new Date(att.createdAt || att.date || Date.now());
@@ -433,20 +428,20 @@ const EventDashboard = ({ darkMode }) => {
   const hasHappened = (eventData?.endDate || eventData?.date) ? new Date(eventData.endDate || eventData.date) < new Date() : true;
 
   return (
-    <Motion.main 
+    <Motion.main
       initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
       className="pt-32 pb-20 px-4 sm:px-6 max-w-7xl mx-auto space-y-8 overflow-x-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Pull to refresh indicator UI */}
-      <div 
+      {}
+      <div
         className="flex justify-center overflow-hidden transition-all duration-200"
         style={{ height: `${pullDistance}px`, opacity: pullDistance / 80 }}
       >
         <div className={`flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
-          <div className={`w-5 h-5 rounded-full border-2 border-t-transparent ${isRefreshing ? 'animate-spin' : ''} ${darkMode ? 'border-white' : 'border-blue-600'}`} 
+          <div className={`w-5 h-5 rounded-full border-2 border-t-transparent ${isRefreshing ? 'animate-spin' : ''} ${darkMode ? 'border-white' : 'border-blue-600'}`}
                style={{ transform: `rotate(${pullDistance * 4}deg)` }}></div>
           <span className="text-xs font-bold">{isRefreshing ? 'Refreshing...' : 'Pull to refresh'}</span>
         </div>
@@ -468,7 +463,7 @@ const EventDashboard = ({ darkMode }) => {
               )}
             </div>
             {userEvents.length > 0 && (
-              <select 
+              <select
                 value={eventId || 'overview'}
                 onChange={handleEventChange}
                 className={`max-w-[200px] text-sm font-bold rounded-xl px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
@@ -516,7 +511,7 @@ const EventDashboard = ({ darkMode }) => {
           </button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
           <Motion.div key={idx} whileHover={{ y: -6, scale: 1.02 }} className={`rounded-[1.5rem] p-6 border flex items-center gap-5 ${glassStyle}`}>
@@ -536,7 +531,7 @@ const EventDashboard = ({ darkMode }) => {
           <div className={`border rounded-[2rem] p-6 lg:col-span-2 ${glassStyle}`}>
             <div className="flex justify-between items-center mb-6">
               <h2 className={`text-lg font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Sales Trend</h2>
-              <select 
+              <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
                 className={`text-xs font-bold rounded-xl px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
@@ -562,7 +557,7 @@ const EventDashboard = ({ darkMode }) => {
             <h2 className={`text-lg font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Recent Registrations</h2>
             <div className="relative w-full sm:w-auto">
               <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-500'}`} />
-              <input 
+              <input
                 type="text"
                 placeholder="Search by name or email..."
                 value={attendeeSearch}
@@ -590,8 +585,8 @@ const EventDashboard = ({ darkMode }) => {
                    </tr>
                 ) : (
                   currentAttendees.map((att, i) => (
-                    <tr 
-                  key={att?.user?._id || i} 
+                    <tr
+                  key={att?.user?._id || i}
                       ref={i === currentAttendees.length - 1 ? lastAttendeeElementRef : null}
                       className="border-t border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                     >
@@ -628,7 +623,7 @@ const EventDashboard = ({ darkMode }) => {
               </tbody>
             </table>
           </div>
-          
+
           {visibleCount < filteredAttendees.length && (
             <div className="p-6 text-center border-t border-black/5 dark:border-white/5">
               <div className="inline-block w-6 h-6 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
@@ -637,7 +632,7 @@ const EventDashboard = ({ darkMode }) => {
         </div>
       </div>
 
-      {/* Quick Edit Modal */}
+      {}
       <AnimatePresence>
         {isEditing && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -655,108 +650,9 @@ const EventDashboard = ({ darkMode }) => {
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
                 <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 bg-slate-50'}`}>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file && file.size > 5 * 1024 * 1024) {
-                      alert("Cover image must be less than 5MB.");
-                      return;
-                    }
-                    setEditingCoverImage(file);
-                  }} />
-                  <img src={editingCoverImage ? URL.createObjectURL(editingCoverImage) : (editForm.coverImage || '/placeholder.png')} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="relative z-10 bg-black/40 backdrop-blur-sm p-2 rounded-lg inline-block">
-                    <ImageIcon size={24} className="text-white mx-auto mb-2" />
-                    <p className="text-xs font-bold text-white">Click to change cover image</p>
-                  </div>
-                </label>
-                <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Event Title</label>
-                  <input type="text" value={editForm.title || ''} onChange={e => setEditForm({...editForm, title: e.target.value})} className={inputStyle} required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Date</label>
-                    <input type="date" value={editForm.date ? editForm.date.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className={inputStyle} required />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Time</label>
-                    <input type="time" value={editForm.time || ''} onChange={e => setEditForm({...editForm, time: e.target.value})} className={inputStyle} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
-                    <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className={inputStyle} />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
-                    <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({...editForm, endTime: e.target.value})} className={inputStyle} />
-                  </div>
-                </div>
-                <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Location</label>
-                  <input type="text" value={typeof editForm.location === 'object' ? editForm.location?.formattedAddress : (editForm.location || '')} onChange={e => setEditForm({...editForm, location: e.target.value})} className={inputStyle} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Price (₦)</label>
-                    <input type="number" value={editForm.price || 0} onChange={e => setEditForm({...editForm, price: e.target.value})} className={inputStyle} />
-                  </div>
-                  <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Capacity</label>
-                    <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className={inputStyle} placeholder="Unlimited" />
-                  </div>
-                </div>
-                {Number(editForm.price) > 0 && (
-                  <div className={`mt-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Landmark size={16} className="text-emerald-500" />
-                      <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Bank Name</label>
-                        <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} className={inputStyle} placeholder="e.g., GTBank" />
-                      </div>
-                      <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Number</label>
-                        <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({...editForm, accountNumber: e.target.value})} className={inputStyle} placeholder="e.g., 0123456789" />
-                      </div>
-                      <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Name</label>
-                        <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({...editForm, accountName: e.target.value})} className={inputStyle} placeholder="e.g., John Doe" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
-                    Cancel
-                  </button>
-                  <button type="button" onClick={handleDelete} disabled={isSaving || (!hasHappened && editForm?.status !== 'draft')} title={(!hasHappened && editForm?.status !== 'draft') ? "Published events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>
-                    Delete
-                  </button>
-                  {editForm?.status === 'draft' && (
-                    <button 
-                      type="button" 
-                      disabled={isSaving} 
-                      onClick={(e) => { editForm.status = 'published'; handleEditSubmit(e); }} 
-                      className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
-                  )}
-                  <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">
-                    {isSaving ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              </form>
-            </Motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  <input type="file" accept="image
 
-      {/* Delete Event Confirmation Modal */}
+}
       <AnimatePresence>
         {showEventDeleteConfirm && (
           <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -788,7 +684,7 @@ const EventDashboard = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Broadcast Modal */}
+      {}
       <AnimatePresence>
         {showBroadcastModal && (
           <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

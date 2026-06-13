@@ -53,8 +53,12 @@ const CreateEvent = () => {
 
   const categories = EVENT_CATEGORIES;
 
-  const getInputStyle = (field) => `w-full rounded-2xl border px-4 py-3.5 text-sm font-medium transition focus:outline-none focus:[box-shadow:var(--eh-ring)] ${
-    errors[field] ? 'border-red-500 bg-red-500/10 eh-text placeholder:text-ink-muted' : 'border-line bg-surface eh-text placeholder:text-ink-muted focus:border-brand'
+  const categories = ['Technology', 'Design', 'Business', 'Music', 'Networking', 'Education'];
+  const glassStyle = darkMode
+    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl'
+    : 'bg-white/60 border-white/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.08)]';
+  const getInputStyle = (field) => `w-full px-5 py-4 rounded-2xl text-sm font-medium border transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${
+    errors[field] ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : (darkMode ? 'bg-slate-900/50 border-slate-700 focus:border-blue-500 focus:bg-slate-900 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400')
   }`;
 
   const labelStyle = 'mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft';
@@ -267,52 +271,51 @@ const CreateEvent = () => {
           <p className="mt-3 max-w-[52ch] text-lg eh-text-soft">Set the details, drop a cover image, and get your crowd together.</p>
         </header>
 
-        {error && <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm font-semibold text-red-500">{error}</div>}
-        {success && <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-500">{success}</div>}
+      {error && <div className="mb-8 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold border border-red-500/20">{error}</div>}
+      {success && <div className="mb-8 p-4 rounded-xl bg-emerald-500/10 text-emerald-500 text-sm font-bold border border-emerald-500/20">{success}</div>}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
-          <div className="space-y-6 lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
 
-            <section className="eh-surface rounded-[1.75rem] p-6 sm:p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand"><AlignLeft size={18} /></span>
-                <h2 className="eh-display text-xl font-bold">Basic information</h2>
+          <Motion.section whileHover={{ scale: 1.01 }} className={`p-8 rounded-[2rem] border ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-500"><AlignLeft size={20} /></div>
+              <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Basic Information</h2>
+            </div>
+            <div className="space-y-5">
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Event Title</label>
+                <input type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g., Summer Networking Mixer" className={getInputStyle('title')} />
               </div>
-              <div className="space-y-5">
-                <div>
-                  <label className={labelStyle}>Event title</label>
-                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g. Summer Networking Mixer" className={getInputStyle('title')} />
-                </div>
-                <div>
-                  <label className={`${labelStyle} mb-3`}>Category</label>
-                  <div className="flex flex-wrap gap-2.5">
-                    {categories.map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setActiveCategory(cat)}
-                        className={`rounded-full px-4 py-2 text-xs font-bold transition-all ${
-                          activeCategory === cat
-                            ? 'bg-brand text-white shadow-eh-sm'
-                            : 'border border-line bg-surface-2 eh-text-soft hover:border-brand hover:text-brand'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className={labelStyle}>Description</label>
-                  <textarea name="description" value={formData.description} onChange={handleInputChange} rows="4" placeholder="What can attendees expect?" className={`${getInputStyle('description')} resize-none`} />
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-3 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Category</label>
+                <div className="flex flex-wrap gap-3">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
+                        activeCategory === cat
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+                          : `border ${darkMode ? 'border-slate-700 hover:bg-slate-800 text-white' : 'border-blue-200 hover:bg-blue-50 text-slate-700'} opacity-100 hover:opacity-100`
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
               </div>
             </section>
 
-            <section className="eh-surface rounded-[1.75rem] p-6 sm:p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand"><Calendar size={18} /></span>
-                <h2 className="eh-display text-xl font-bold">Date &amp; location</h2>
+          <Motion.section whileHover={{ scale: 1.01 }} className={`p-8 rounded-[2rem] border ${glassStyle}`}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-500"><Calendar size={20} /></div>
+              <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Date & Location</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={`block text-xs font-bold uppercase tracking-wider opacity-100 mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Date</label>
+                <input type="date" name="date" value={formData.date} onChange={handleInputChange} className={getInputStyle('date')} />
               </div>
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
@@ -428,85 +431,15 @@ const CreateEvent = () => {
                   </button>
                 </div>
               </div>
-            </section>
-
-            <section className="eh-surface rounded-[1.75rem] p-6 sm:p-8">
-              <div className="mb-1 flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand"><Ticket size={18} /></span>
-                <h2 className="eh-display text-xl font-bold">Ticket tiers</h2>
-              </div>
-              <p className="mb-6 text-sm eh-text-muted sm:ml-[3.25rem]">Optional. Add levels like VIP or VVIP, each with its own price and colour. Skip this for a single-price event.</p>
-
-              {ticketTiers.length > 0 && (
-                <div className="space-y-3">
-                  {ticketTiers.map((tier, idx) => (
-                    <div key={idx} className="rounded-2xl border border-line bg-surface-2 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        {TIER_COLORS.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            aria-label={`Set tier colour ${c}`}
-                            onClick={() => updateTier(idx, 'color', c)}
-                            style={{ background: c }}
-                            className={`h-6 w-6 rounded-full transition ${tier.color === c ? 'ring-2 ring-[var(--eh-text)] ring-offset-2 ring-offset-[var(--eh-surface-2)]' : 'opacity-60 hover:opacity-100'}`}
-                          />
-                        ))}
-                        <button type="button" onClick={() => removeTier(idx)} aria-label="Remove tier" className="ml-auto grid h-8 w-8 place-items-center rounded-full text-ink-muted transition-colors hover:bg-red-500/10 hover:text-red-500">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <input value={tier.name} onChange={(e) => updateTier(idx, 'name', e.target.value)} placeholder="Tier name (e.g. VIP)" className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]" />
-                        <input type="number" value={tier.price} onChange={(e) => updateTier(idx, 'price', e.target.value)} placeholder="Price (₦)" className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]" />
-                        <input type="number" value={tier.capacity} onChange={(e) => updateTier(idx, 'capacity', e.target.value)} placeholder="Capacity" className="w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]" />
-                      </div>
-                      <input value={tier.perks} onChange={(e) => updateTier(idx, 'perks', e.target.value)} placeholder="Perks (optional, e.g. Front-row + lounge access)" className="mt-3 w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]" />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button type="button" onClick={addTier} className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-dashed border-line bg-surface-2 px-4 py-3 text-sm font-semibold eh-text-soft transition hover:border-brand hover:text-brand">
-                <Plus size={16} /> Add tier
-              </button>
-            </section>
-          </div>
-
-          <div className="space-y-5 lg:sticky lg:top-28 lg:self-start">
-            <div className="eh-surface rounded-[1.75rem] p-6">
-              <h3 className="eh-eyebrow mb-4 flex items-center gap-2">
-                <ImageIcon size={15} /> Cover image
-              </h3>
-              <label className="group relative block cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-line bg-surface-2 p-8 text-center transition-colors hover:border-brand">
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                {coverImage ? (
-                  <img src={coverImage} alt="Cover preview" className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                  <>
-                    <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-brand-soft text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-                      <ImageIcon size={22} />
-                    </div>
-                    <p className="eh-display text-sm font-bold">Click to upload</p>
-                    <p className="mt-1 text-xs eh-text-muted">PNG, JPG up to 5MB</p>
-                  </>
-                )}
-              </label>
             </div>
-
-            <Link to="/flyer-designer" className="eh-btn eh-btn-ghost w-full">Design a flyer</Link>
-
-            <button className="eh-btn eh-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50" onClick={() => submitEvent('published')} disabled={isLoading}>
-              Publish event
-            </button>
-            <button className="eh-btn eh-btn-ghost w-full disabled:cursor-not-allowed disabled:opacity-50" onClick={() => submitEvent('draft')} disabled={isLoading}>
-              Save as draft
-            </button>
-          </div>
+          </Motion.section>
         </div>
-      </div>
-    </Motion.main>
-  );
-};
 
-export default CreateEvent;
+        <div className="space-y-6">
+          <Motion.div whileHover={{ scale: 1.02 }} className={`p-6 rounded-[2rem] border ${glassStyle}`}>
+            <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              <ImageIcon size={16} /> Cover Image
+            </h3>
+            <label className={`block border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 hover:bg-slate-800/50 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 bg-slate-50'}`}>
+              <input type="file" accept="image
+

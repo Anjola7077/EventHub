@@ -43,14 +43,14 @@ const EventRegistration = ({ darkMode }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const price = selectedTier ? selectedTier.price : eventData?.price || 0;
     if (price > 0 && !receiptFile) {
       return alert("Please upload your payment receipt to continue!");
     }
 
     if (!form.name || !form.email || !form.agree) return;
-    
+
     setIsLoading(true);
     try {
       const payload = new FormData();
@@ -136,13 +136,13 @@ const EventRegistration = ({ darkMode }) => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-3">
                   <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Select Ticket Tier</label>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {eventData?.ticketTiers?.length > 0 ? (
                       eventData.ticketTiers.map((tier, idx) => (
-                        <div 
+                        <div
                           key={idx}
                           onClick={() => setSelectedTier(tier)}
                           className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedTier?.name === tier.name ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : darkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}
@@ -173,143 +173,7 @@ const EventRegistration = ({ darkMode }) => {
                   <div className="space-y-2 mt-6">
                     <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Upload Payment Receipt</label>
                     <div className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer relative transition-colors ${darkMode ? 'border-slate-700 bg-slate-900 hover:border-blue-500' : 'border-slate-300 bg-slate-50 hover:border-blue-500'}`}>
-                      <input 
-                        type="file" 
-                        accept="image/*,.pdf" 
-                        onChange={(e) => setReceiptFile(e.target.files[0])} 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                      />
-                      {receiptFile ? (
-                        <p className="text-sm font-bold text-blue-600">{receiptFile.name}</p>
-                      ) : (
-                        <>
-                          <p className={`text-sm font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Tap to upload receipt</p>
-                          <p className="text-xs text-slate-500 mt-1">Image or PDF. Max 5MB.</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      <input
+                        type="file"
+                        accept="image
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Agree to terms</label>
-                    <span className={`text-xs ${darkMode ? 'text-white' : 'text-slate-500'}`}>Required</span>
-                  </div>
-                  <label className={`flex items-center gap-3 rounded-2xl border px-4 py-3 cursor-pointer ${darkMode ? 'border-slate-700 bg-slate-950' : 'border-slate-200 bg-slate-50'}`}>
-                    <input type="checkbox" checked={form.agree} onChange={handleChange('agree')} className="h-5 w-5 rounded-md text-blue-600 focus:ring-blue-500" />
-                    <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-700'}`}>I agree to the Terms & Conditions and refund policy.</span>
-                  </label>
-                </div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? 'Processing...' : 'Confirm Registration'} <ArrowRight size={18} />
-                </button>
-                <p className={`text-sm inline-flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
-                  <Lock size={16} /> Your registration will be verified by the organizer.
-                </p>
-              </form>
-            ) : (
-              <div className="space-y-6 mt-10 text-center">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                  <CheckCircle2 size={36} />
-                </div>
-                <div>
-                  <h2 className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>You're registered!</h2>
-                  <p className={`mt-3 text-sm ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                    You've successfully registered for <strong>{eventData?.title || 'this event'}</strong>. A confirmation has been sent to <strong>{form.email}</strong>.
-                  </p>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <button
-                    onClick={() => navigate(`/event-details/${eventId}`)}
-                    className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-bold transition-colors ${darkMode ? 'border-slate-700 bg-slate-950 text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100'}`}
-                  >
-                    View Event Details
-                  </button>
-                  <button
-                    onClick={handleDownloadTicket}
-                    disabled={isDownloading}
-                    className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-bold transition-colors ${darkMode ? 'border-slate-700 bg-slate-950 text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100'}`}
-                  >
-                    <Download size={18} /> {isDownloading ? '...' : 'PDF Ticket'}
-                  </button>
-                  <button
-                    onClick={() => navigate(`/chat/${eventId}`)}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-4 text-xs sm:text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors"
-                  >
-                    Join Event Chat
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="space-y-6">
-            <div className={`rounded-[2rem] border p-6 shadow-2xl ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Event summary</h2>
-              <div className={`space-y-4 text-sm ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                <div className={`rounded-2xl p-4 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-                  <div className="font-bold">{eventData?.title || 'Event Registration'}</div>
-                  <div className="mt-2">{eventData?.date ? new Date(eventData.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'TBA'}</div>
-                  <div className="mt-1">{eventData?.time ? eventData.time : 'TBA'}</div>
-                </div>
-                <div className={`rounded-2xl p-4 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-                  <div className="font-bold">Selected ticket</div>
-                  <div className="mt-2">{selectedTier?.name || 'General Admission'}</div>
-                </div>
-                <div className={`rounded-2xl p-4 ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-                  <div className="font-bold">Total</div>
-                  <div className="mt-2 text-xl font-black">{(!selectedTier?.price && !eventData?.price) ? 'Free' : `₦${(selectedTier?.price || eventData?.price || 0).toLocaleString()}`}</div>
-                </div>
-                {(selectedTier?.price > 0 || eventData?.price > 0) && (eventData?.bankName || eventData?.accountNumber || eventData?.accountName) && (
-                  <div className={`rounded-2xl p-4 border ${darkMode ? 'bg-slate-950 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Landmark size={16} className="text-emerald-500" />
-                      <div className="font-bold">Payment Details</div>
-                    </div>
-                    <div className={`space-y-2 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {eventData.bankName && (
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Bank</span>
-                          <span>{eventData.bankName}</span>
-                        </div>
-                      )}
-                      {eventData.accountNumber && (
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Account No.</span>
-                          <span className="font-mono">{eventData.accountNumber}</span>
-                        </div>
-                      )}
-                      {eventData.accountName && (
-                        <div className="flex justify-between">
-                          <span className="font-semibold">Account Name</span>
-                          <span>{eventData.accountName}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className={`rounded-[2rem] border p-6 shadow-2xl ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Need help?</h2>
-              <p className={`text-sm ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                If you need help with your registration, contact the organizer or visit the event page for more details.
-              </p>
-              <div className="mt-6 space-y-3">
-                <button onClick={() => navigate('/profile')} className={`w-full rounded-2xl border px-5 py-3 text-sm font-bold transition-colors ${darkMode ? 'border-slate-700 bg-slate-950 text-white hover:bg-slate-800' : 'border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100'}`}>
-                  View Organizer Profile
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Motion.main>
-  );
-};
-
-export default EventRegistration;

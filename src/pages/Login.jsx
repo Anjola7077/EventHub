@@ -39,8 +39,8 @@ const Login = () => {
 
   return (
     <Motion.main
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="eh-page-bg flex min-h-screen items-center justify-center px-4 py-24"
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      className="min-h-screen flex items-center justify-center px-4 pt-20"
     >
       <Motion.div
         initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -56,87 +56,61 @@ const Login = () => {
             </span>
             <span className="text-sm font-bold uppercase tracking-[0.2em]">EventHub</span>
           </div>
+          <h2 className={`text-2xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Welcome Back</h2>
+          <p className={`text-sm font-semibold opacity-100 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Sign in to manage your events.</p>
+        </div>
 
+        {error && <div className="mb-6 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold text-center border border-red-500/20">{error}</div>}
+
+        <form onSubmit={handleLogin} className="space-y-5">
           <div className="relative">
-            <h2 className="eh-display text-4xl font-extrabold leading-[1.05]">
-              Your next night out is one login away.
-            </h2>
-            <ul className="mt-8 space-y-3">
-              {perks.map(({ icon: Icon, label }) => (
-                <li key={label} className="flex items-center gap-3 text-white/90">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/15">
-                    <Icon size={17} />
-                  </span>
-                  <span className="font-medium">{label}</span>
-                </li>
-              ))}
-            </ul>
+            <Mail size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40'}`} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email Address"
+              required
+              className={`w-full pl-12 pr-4 py-3.5 rounded-2xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${darkMode ? 'bg-slate-900/50 border-slate-700 text-white placeholder-slate-400' : 'bg-white/50 border-white text-slate-900'}`}
+            />
           </div>
-
-          <p className="relative text-sm text-white/70">Discover. Connect. Show up.</p>
-        </div>
-
-        {/* Form */}
-        <div className="p-8 sm:p-12">
-          <div className="mb-8">
-            <h1 className="eh-display text-3xl font-extrabold">Welcome back</h1>
-            <p className="mt-2 text-sm eh-text-soft">Sign in to manage your events and RSVPs.</p>
-          </div>
-
-          {error && (
-            <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-center text-sm font-semibold text-red-500">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative">
-              <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
-                required
-                className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-12 pr-4 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]"
-              />
-            </div>
-            <div className="relative">
-              <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted" />
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                required
-                className="w-full rounded-2xl border border-line bg-surface py-3.5 pl-12 pr-12 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted transition-colors hover:text-brand"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-
-            <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm font-semibold eh-text-brand hover:opacity-80 transition">
-                Forgot password?
-              </Link>
-            </div>
-
-            <button type="submit" disabled={isLoading} className="eh-btn eh-btn-primary h-14 w-full text-base disabled:opacity-60">
-              {isLoading ? <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <>Sign in <ArrowRight size={18} /></>}
+          <div className="relative">
+            <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40'}`} />
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              className={`w-full pl-12 pr-12 py-3.5 rounded-2xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${darkMode ? 'bg-slate-900/50 border-slate-700 text-white placeholder-slate-400' : 'bg-white/50 border-white text-slate-900'}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className={`absolute right-4 top-1/2 -translate-y-1/2 transition-opacity ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40 hover:opacity-100'}`}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
-          </form>
+          </div>
 
-          <p className="mt-8 text-center text-sm eh-text-soft">
-            New to EventHub? <Link to="/register" className="font-semibold eh-text-brand hover:opacity-80">Create an account</Link>
-          </p>
-        </div>
-      </Motion.div>
+          <div className="flex justify-end">
+            <Link to="/forgot-password" className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors">
+              Forgot Password?
+            </Link>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black tracking-wide shadow-xl shadow-blue-600/30 transition-all flex justify-center items-center h-14"
+          >
+            {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Sign In"}
+          </button>
+        </form>
+        <p className={`text-center mt-6 text-sm font-semibold opacity-100 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+          Don't have an account? <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:underline">Create one</Link>
+        </p>
+      </div>
     </Motion.main>
   );
 };

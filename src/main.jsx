@@ -17,7 +17,6 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
-// Register the Service Worker for PWA offline support
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')

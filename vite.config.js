@@ -1,9 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const BACKEND = 'https://eventhub-backend-nfzk.onrender.com'
-
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {

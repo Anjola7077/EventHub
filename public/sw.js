@@ -7,7 +7,7 @@ self.addEventListener('push', function(event) {
       badge: '/logo.png',
       data: { url: data.url || '/' }
     };
-    
+
     event.waitUntil(self.registration.showNotification(data.title || 'EventHub', options));
   }
 });

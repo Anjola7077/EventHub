@@ -23,8 +23,8 @@ const Register = () => {
   const [isResending, setIsResending] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: '' });
   const [errors, setErrors] = useState({});
-  const [usernameStatus, setUsernameStatus] = useState(''); // 'checking', 'available', 'taken'
-  const [emailStatus, setEmailStatus] = useState(''); // 'checking', 'available', 'taken'
+  const [usernameStatus, setUsernameStatus] = useState('');
+  const [emailStatus, setEmailStatus] = useState('');
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -73,6 +73,16 @@ const Register = () => {
   };
   const isPasswordValid = Object.values(passwordRequirements).every(Boolean);
 
+  const passwordScore = Object.values(passwordRequirements).filter(Boolean).length;
+  let strengthLabel = '';
+  let strengthColor = '';
+  let strengthWidth = '0%';
+  if (form.password.length > 0) {
+    if (passwordScore <= 2) { strengthLabel = 'Weak'; strengthColor = 'bg-red-500'; strengthWidth = '33%'; }
+    else if (passwordScore <= 4) { strengthLabel = 'Good'; strengthColor = 'bg-amber-500'; strengthWidth = '66%'; }
+    else { strengthLabel = 'Strong'; strengthColor = 'bg-emerald-500'; strengthWidth = '100%'; }
+  }
+
   useEffect(() => {
     if (!form.username) {
       setUsernameStatus('');
@@ -98,7 +108,6 @@ const Register = () => {
       return;
     }
 
-    // Only run backend check if it loosely looks like a valid email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) {
       setEmailStatus('');
@@ -147,6 +156,8 @@ const Register = () => {
     if (!form.name) newErrors.name = true;
     if (!form.username || usernameStatus === 'taken') newErrors.username = true;
     if (!form.email || emailStatus === 'taken') newErrors.email = true;
+    if (!form.gender) newErrors.gender = true;
+    if (!form.phone) newErrors.phone = true;
 
     let errorMessage = 'Please fill in all highlighted fields.';
 
@@ -201,16 +212,16 @@ const Register = () => {
     } else if (e.target.type === 'file') {
       const file = e.target.files[0];
       if (file) {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        if (file.size > 5 * 1024 * 1024) {
           showToast("File size must be less than 5MB.", "error");
           return;
         }
         const reader = new FileReader();
         reader.onloadend = () => {
-          setForm((prev) => ({ ...prev, [field]: reader.result })); // Store as Base64 for JSON transmission
+          setForm((prev) => ({ ...prev, [field]: reader.result }));
         };
         reader.readAsDataURL(file);
-        return; // Early return since FileReader is async
+        return;
       } else value = '';
     } else {
       value = e.target.value;
@@ -222,7 +233,6 @@ const Register = () => {
     const val = e.target.value.replace(/[^0-9]/g, '');
     setOtp((prev) => prev.map((digit, idx) => (idx === index ? val : digit)));
 
-    // Auto-focus next input
     if (val && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) nextInput.focus();
@@ -238,7 +248,7 @@ const Register = () => {
     setError('');
     try {
       if (isEditing) {
-        // Assuming your backend uses PATCH /users/me to update profile info
+
         const updatePayload = {
           fullName: form.name,
           username: form.username,
@@ -294,12 +304,12 @@ const Register = () => {
     setError('');
     setResendStatus('');
     try {
-      // Assuming your backend has an endpoint to resend the OTP
+
       await api.post('/auth/resend-otp', { email: form.email });
       setResendStatus('A new OTP has been sent to your email.');
       const expiry = Date.now() + 60 * 1000;
       localStorage.setItem('resendOtpExpiry', expiry.toString());
-      setResendTimer(60); // Start the 60-second countdown
+      setResendTimer(60);
     } catch (error) {
       setError(sanitizeError(error, "Failed to resend OTP. Please try again."));
     } finally {
@@ -316,11 +326,10 @@ const Register = () => {
 
     try {
       const res = await api.post('/auth/verify', { email: form.email, otp: otpCode });
-      localStorage.removeItem('resendOtpExpiry'); // Cleanup on success
+      localStorage.removeItem('resendOtpExpiry');
       setIsComplete(true);
       setStep(5);
 
-      // Save token and instantly log the user in on the frontend
       if (res.data?.token) {
         localStorage.setItem('token', res.data.token);
       }
@@ -397,7 +406,7 @@ const Register = () => {
                 />
               </div>
 
-              {error && <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-center text-sm font-semibold text-red-500">{error}</div>}
+              {error && <div className="mt-6 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold text-center border border-red-500/20">{error}</div>}
             </div>
 
             <AnimatePresence mode="wait">
@@ -451,23 +460,36 @@ const Register = () => {
                   </div>
                   {!isEditing && (
                     <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold eh-text">Password</label>
-                        <div className="relative">
-                          <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleFormChange('password')} onFocus={() => setPasswordFocused(true)} placeholder="Min. 8 characters" className={getInputStyle('password')} />
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted hover:text-brand transition-colors">
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        {(passwordFocused || form.password) && (
-                          <ul className="grid gap-1.5 pt-1 text-xs font-medium eh-text-muted sm:grid-cols-2">
-                            <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.length ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.length ? '' : 'opacity-40'} /> 8+ characters</li>
-                            <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.upper ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.upper ? '' : 'opacity-40'} /> 1 uppercase letter</li>
-                            <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.lower ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.lower ? '' : 'opacity-40'} /> 1 lowercase letter</li>
-                            <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.number ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.number ? '' : 'opacity-40'} /> 1 number</li>
-                            <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.special ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.special ? '' : 'opacity-40'} /> 1 special character</li>
-                          </ul>
-                        )}
+              <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-900 dark:text-white">Password</label>
+                <div className="relative">
+                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleFormChange('password')} placeholder="Min. 8 characters" className={getInputStyle('password')} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute right-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <ul className={`text-xs space-y-1.5 pt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'} font-medium`}>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.length ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.length ? '' : 'opacity-40'}/> At least 8 characters</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.upper ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.upper ? '' : 'opacity-40'}/> At least 1 uppercase letter</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.lower ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.lower ? '' : 'opacity-40'}/> At least 1 lowercase letter</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.number ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.number ? '' : 'opacity-40'}/> At least 1 number</li>
+                  <li className={`flex items-center gap-2 transition-colors duration-300 ${passwordRequirements.special ? 'text-emerald-500' : ''}`}><CheckCircle2 size={14} className={passwordRequirements.special ? '' : 'opacity-40'}/> At least 1 special character</li>
+                </ul>
+                {form.password && (
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className={`text-[10px] uppercase tracking-wider font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Password Strength</span>
+                      <span className={`text-[10px] uppercase tracking-wider font-black ${strengthLabel === 'Weak' ? 'text-red-500' : strengthLabel === 'Good' ? 'text-amber-500' : 'text-emerald-500'}`}>{strengthLabel}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                      <Motion.div
+                        className={`h-full ${strengthColor} transition-colors duration-300`}
+                        initial={{ width: '0%' }}
+                        animate={{ width: strengthWidth }}
+                      />
+                    </div>
+                  </div>
+                )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-bold eh-text">Confirm password</label>
@@ -479,7 +501,11 @@ const Register = () => {
                     {isEditing && (
                       <button type="button" onClick={() => navigate('/profile')} className={backBtn}>Cancel</button>
                     )}
-                    <button type="button" onClick={handleNextStep1} className={nextBtn}>
+                    <button
+                      type="button"
+                      onClick={handleNextStep1}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-4 text-sm font-black text-white hover:bg-blue-700 transition"
+                    >
                       Continue <ArrowRight size={18} />
                     </button>
                   </div>
@@ -493,188 +519,14 @@ const Register = () => {
                   exit={{ opacity: 0, x: -24 }}
                   className="space-y-6"
                 >
-                  <div>
-                    <h4 className="eh-display text-xl font-bold">Profile details</h4>
-                    <p className="mt-1.5 text-sm eh-text-soft">Add a short bio and your profile photos.</p>
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-sm font-bold eh-text">Profile images <span className="text-xs font-normal eh-text-muted">(optional)</span></label>
-                    <div className="relative mb-8">
-                      <label className={`flex h-32 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-colors ${errors.coverPhoto ? 'border-red-500 bg-red-500/10' : 'border-line bg-surface-2 hover:border-brand'}`}>
-                        <input type="file" className="hidden" accept="image/*" onChange={handleFormChange('coverPhoto')} />
-                        {form.coverPhoto ? (
-                          <img src={form.coverPhoto} alt="Cover" className="h-full w-full object-cover" />
-                        ) : (
-                          <>
-                            <ImageIcon className="mb-2 text-ink-muted" size={24} />
-                            <span className="text-xs font-semibold eh-text-muted">Upload cover photo</span>
-                          </>
-                        )}
-                      </label>
-                      <label className={`absolute -bottom-6 left-6 flex h-16 w-16 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 transition-colors sm:h-20 sm:w-20 ${errors.profilePicture ? 'border-red-500 bg-red-500/10' : 'border-surface bg-surface-2 hover:border-brand'}`}>
-                        <input type="file" className="hidden" accept="image/*" onChange={handleFormChange('profilePicture')} />
-                        {form.profilePicture ? (
-                          <img src={form.profilePicture} alt="Profile" className="h-full w-full object-cover" />
-                        ) : (
-                          <Camera className="text-ink-muted" size={20} />
-                        )}
-                      </label>
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Profile Details</h4>
+                      <p className={`text-sm mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Add a short bio and your profile details.</p>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold eh-text">Bio <span className="text-xs font-normal eh-text-muted">(optional)</span></label>
-                    <textarea value={form.bio} onChange={handleFormChange('bio')} placeholder="Tell people a little about yourself, e.g. 'I love tech events and concerts'" rows={4} className={getInputStyle('bio')} />
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold eh-text">Location <span className="text-xs font-normal eh-text-muted">(optional)</span></label>
-                      <input value={form.location} onChange={handleFormChange('location')} placeholder="e.g. Lagos, Nigeria" className={getInputStyle('location')} />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold eh-text">Website / portfolio <span className="text-xs font-normal eh-text-muted">(optional)</span></label>
-                      <input value={form.website} onChange={handleFormChange('website')} placeholder="https://yoursite.com" className={getInputStyle('website')} />
-                    </div>
-                  </div>
-                  <div className="flex justify-between gap-3 pt-2">
-                    <button type="button" onClick={() => goToStep(1)} className={backBtn}>Back</button>
-                    <button type="button" onClick={handleNextStep2} className={nextBtn}>Continue <ArrowRight size={18} /></button>
-                  </div>
-                </Motion.form>
-              )}
-              {step === 3 && (
-                <Motion.form
-                  key="step3"
-                  initial={{ opacity: 0, x: 24 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -24 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h4 className="eh-display text-xl font-bold">Your interests</h4>
-                    <p className="mt-1.5 text-sm eh-text-soft">Pick the things you love. We’ll use these to suggest events for you.</p>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {interestsList.map((interest) => (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => toggleInterest(interest)}
-                        className={`rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${selectedInterests.includes(interest) ? 'border-brand bg-brand-soft text-brand' : 'border-line bg-surface-2 eh-text-soft hover:border-brand'}`}
-                      >
-                        {interest}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <button type="button" onClick={() => goToStep(2)} className={backBtn}>Back</button>
-                    <div className="flex items-center gap-4">
-                      <button type="button" onClick={() => submitRegistration(true)} disabled={isLoading} className="text-sm font-semibold text-ink-muted transition-colors hover:text-ink-soft disabled:opacity-50">
-                        Skip for now
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => submitRegistration(false)}
-                        disabled={selectedInterests.length === 0 || isLoading}
-                        className={`${nextBtn} disabled:cursor-not-allowed disabled:opacity-50`}
-                      >
-                        {isLoading ? (isEditing ? "Saving…" : "Creating…") : (isEditing ? "Save changes" : "Continue")} <ArrowRight size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </Motion.form>
-              )}
-              {step === 4 && (
-                <Motion.form
-                  key="step4"
-                  onSubmit={verifyOTP}
-                  initial={{ opacity: 0, x: 24 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -24 }}
-                  className="space-y-6"
-                >
-                  <div>
-                    <h4 className="eh-display text-xl font-bold">Almost there</h4>
-                    <p className="mt-1.5 text-sm eh-text-soft">We sent a 6-digit code to <strong className="eh-text">{form.email || 'your email'}</strong>. Enter it below to verify your account.</p>
-                  </div>
-                  <div className="grid grid-cols-6 gap-2">
-                    {otp.map((digit, index) => (
-                      <input
-                        key={index}
-                        id={`otp-${index}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={handleOtpChange(index)}
-                        className="w-full rounded-2xl border border-line bg-surface py-3 text-center text-xl font-bold eh-text transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]"
-                      />
-                    ))}
-                  </div>
+                    <div className="space-y-3">
+                      <label className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Profile Images</label>
+                      <div className="relative mb-8">
+                        <label className={`block h-32 w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden relative ${errors.coverPhoto ? 'border-red-500 bg-red-50 dark:bg-red-500/10' : (darkMode ? 'border-slate-700 bg-slate-800/50 hover:border-blue-500' : 'border-slate-300 bg-slate-50 hover:border-blue-500')}`}>
+                          <input type="file" className="hidden" accept="image
 
-                  {resendStatus && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center text-sm font-bold text-emerald-500">{resendStatus}</div>}
-
-                  <div className="text-center">
-                    <p className="text-sm eh-text-soft">
-                      Didn’t receive the code?{' '}
-                      {resendTimer > 0 ? (
-                        <span className="font-bold eh-text-muted">Resend in {resendTimer}s</span>
-                      ) : (
-                        <button type="button" onClick={handleResendOTP} disabled={isResending} className="font-bold eh-text-brand hover:opacity-80 disabled:opacity-50">
-                          {isResending ? 'Resending…' : 'Resend OTP'}
-                        </button>
-                      )}
-                    </p>
-                  </div>
-
-                  <label className="flex items-start gap-3 rounded-2xl border border-line bg-surface-2 p-4 text-sm eh-text-soft">
-                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-5 w-5 rounded-md accent-[var(--eh-brand)]" />
-                    <span>I agree to the <a href="#" className="font-semibold eh-text-brand hover:opacity-80">Terms &amp; Conditions</a> and <a href="#" className="font-semibold eh-text-brand hover:opacity-80">Privacy Policy</a>.</span>
-                  </label>
-                  <div className="flex justify-between gap-3 pt-2">
-                    <button type="button" onClick={() => goToStep(3)} className={backBtn}>Back</button>
-                    <button
-                      type="submit"
-                      disabled={!agreed || isLoading || otp.some(digit => !digit)}
-                      className={`${nextBtn} disabled:cursor-not-allowed disabled:opacity-60`}
-                    >
-                      {isLoading ? <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <>Create account <PartyPopper size={18} /></>}
-                    </button>
-                  </div>
-                </Motion.form>
-              )}
-              {step === 5 && isComplete && (
-                <Motion.div
-                  key="step5"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="space-y-6 py-8 text-center"
-                >
-                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
-                    <ShieldCheck size={48} />
-                  </div>
-                  <h3 className="eh-display text-3xl font-extrabold">Welcome aboard!</h3>
-                  <p className="text-sm eh-text-soft">Your account is verified. Start discovering events made for you.</p>
-                  <Link to="/events" className="eh-btn eh-btn-primary w-full">Explore events</Link>
-                </Motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {toast.show && (
-          <Motion.div
-            initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
-            className={`fixed bottom-8 left-1/2 z-50 -translate-x-1/2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-eh-lg ${toast.type === 'error' ? 'bg-red-600' : 'bg-emerald-600'}`}
-          >
-            {toast.message}
-          </Motion.div>
-        )}
-      </AnimatePresence>
-    </Motion.main>
-  );
-};
-
-export default Register;

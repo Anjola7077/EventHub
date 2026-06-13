@@ -5,7 +5,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Add a request interceptor to automatically attach the token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -14,24 +13,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Add a response interceptor to handle global errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // If the backend says the token is invalid, expired, or the user was deleted
+
     if (error.response && error.response.status === 401) {
-      // Define pages where unauthenticated users are allowed to be
+
       const publicPages = ['/login', '/register', '/', '/home', '/events', '/forgot-password'];
       const currentPath = window.location.pathname;
 
-      // Check if the current route is one of the strictly defined public pages or starts with a public dynamic route
       const isPublic =
         publicPages.includes(currentPath) ||
         currentPath.startsWith('/event-details/') ||
         currentPath.startsWith('/reset-password/') ||
         currentPath.startsWith('/resetpassword/');
 
-      // Only force redirect to login if they are on a private dashboard/profile page
       if (!isPublic) {
         localStorage.removeItem('token');
         window.location.href = '/login';

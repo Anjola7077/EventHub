@@ -7,28 +7,28 @@ import api from '../api/axios';
 const ResetPassword = ({ darkMode }) => {
   const { token } = useParams();
   const navigate = useNavigate();
-  
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       return setError("Passwords do not match.");
     }
     if (password.length < 8) {
       return setError("Password must be at least 8 characters long.");
     }
-    
+
     setIsLoading(true);
     setError('');
-    
+
     try {
       await api.put(`/auth/reset-password/${token}`, { password });
       setIsSuccess(true);
@@ -41,16 +41,16 @@ const ResetPassword = ({ darkMode }) => {
   };
 
   return (
-    <Motion.main 
-      initial={{ opacity: 0, y: 20 }} 
-      animate={{ opacity: 1, y: 0 }} 
+    <Motion.main
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       className="min-h-screen flex items-center justify-center px-4 pt-20"
     >
       <div className={`w-full max-w-md p-8 rounded-[2rem] border backdrop-blur-2xl shadow-2xl ${darkMode ? 'bg-slate-800/60 border-slate-700/50' : 'bg-white/60 border-white/50'}`}>
-        
+
         {isSuccess ? (
-          <Motion.div 
+          <Motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-6"
@@ -62,7 +62,7 @@ const ResetPassword = ({ darkMode }) => {
             <p className={`text-sm font-semibold opacity-100 mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
               Your password has been successfully updated. You can now sign in with your new credentials.
             </p>
-            <button 
+            <button
               onClick={() => navigate('/login')}
               className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black tracking-wide shadow-xl shadow-blue-600/30 transition-all"
             >
@@ -80,7 +80,7 @@ const ResetPassword = ({ darkMode }) => {
                 Please enter and confirm your new password below.
               </p>
             </div>
-            
+
             {error && <div className="mb-6 p-4 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold text-center border border-red-500/20">{error}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -91,12 +91,12 @@ const ResetPassword = ({ darkMode }) => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              
+
               <div className="relative">
                 <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white opacity-100' : 'text-slate-900 opacity-40'}`} />
                 <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm New Password" required className={`w-full pl-12 pr-12 py-3.5 rounded-2xl text-sm font-medium border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${darkMode ? 'bg-slate-900/50 border-slate-700 text-white placeholder-slate-400' : 'bg-white/50 border-white text-slate-900'}`} />
               </div>
-              
+
               <button type="submit" disabled={isLoading || !password || !confirmPassword} className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black tracking-wide shadow-xl shadow-blue-600/30 transition-all flex justify-center items-center h-14 disabled:opacity-70 disabled:cursor-not-allowed">
                 {isLoading ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Reset Password"}
               </button>

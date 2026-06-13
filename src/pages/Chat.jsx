@@ -406,7 +406,7 @@ const Chat = ({ darkMode }) => {
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 flex flex-col"
     >
-      {/* Header */}
+      {}
       <div className={`flex-shrink-0 px-3 sm:px-5 py-3 border-b backdrop-blur-xl ${
         darkMode
           ? 'bg-slate-900/95 border-slate-800/80'
@@ -444,7 +444,7 @@ const Chat = ({ darkMode }) => {
         </div>
       </div>
 
-      {/* Pinned Message Banner */}
+      {}
       <AnimatePresence>
         {pinnedMessage && (
           <Motion.div
@@ -476,7 +476,7 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Error Banner */}
+      {}
       <AnimatePresence>
         {error && (
           <Motion.div
@@ -495,7 +495,7 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Messages Area */}
+      {}
       <div
         ref={messagesContainerRef}
         className={`flex-1 overflow-y-auto overflow-x-hidden ${
@@ -544,7 +544,7 @@ const Chat = ({ darkMode }) => {
                       }`}
                       onContextMenu={(e) => handleContextMenu(e, msg)}
                     >
-                      {/* Sender name */}
+                      {}
                       {showSender && msg.senderName && (
                         <p className={`text-[11px] font-semibold mb-1 ml-3 ${
                           darkMode ? 'text-blue-400' : 'text-blue-600'
@@ -553,7 +553,7 @@ const Chat = ({ darkMode }) => {
                         </p>
                       )}
 
-                      {/* Message bubble */}
+                      {}
                       <div
                         className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl transition-colors ${
                           msg.isOwn
@@ -569,7 +569,7 @@ const Chat = ({ darkMode }) => {
                                 }`
                         }`}
                       >
-                        {/* Reply reference */}
+                        {}
                         {msg.replyTo && (
                           <div className={`mb-1.5 px-2.5 py-1.5 rounded-lg text-xs border-l-2 ${
                             msg.isOwn
@@ -585,7 +585,7 @@ const Chat = ({ darkMode }) => {
                           </div>
                         )}
 
-                        {/* Image */}
+                        {}
                         {msg.image && (
                           <div className="mb-2 -mx-1 -mt-0.5">
                             <img
@@ -597,12 +597,12 @@ const Chat = ({ darkMode }) => {
                           </div>
                         )}
 
-                        {/* Audio / Voice Note */}
+                        {}
                         {msg.audio && (
                           <AudioPlayer src={msg.audio} isOwn={msg.isOwn} darkMode={darkMode} />
                         )}
 
-                        {/* Text */}
+                        {}
                         {msg.text && (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                             {msg.text}
@@ -612,7 +612,7 @@ const Chat = ({ darkMode }) => {
                           </p>
                         )}
 
-                        {/* Time + status */}
+                        {}
                         <div className={`flex items-center gap-1 mt-1 ${
                           msg.isOwn ? 'justify-end' : ''
                         }`}>
@@ -624,7 +624,7 @@ const Chat = ({ darkMode }) => {
                           {msg.isOwn && <CheckCheck size={12} className="text-blue-200/70" />}
                         </div>
 
-                        {/* Reactions */}
+                        {}
                         {msg.reactions?.length > 0 && (
                           <div className="flex gap-1 mt-1.5 flex-wrap">
                             {msg.reactions.map((r, i) => (
@@ -646,7 +646,7 @@ const Chat = ({ darkMode }) => {
                         )}
                       </div>
 
-                      {/* Hover reactions */}
+                      {}
                       <div className={`absolute ${msg.isOwn ? '-left-8' : '-right-8'} top-0 opacity-0 group-hover:opacity-100 transition-opacity`}>
                         <div className={`flex flex-col gap-0.5 py-1 rounded-lg px-0.5 ${
                           darkMode ? 'bg-slate-800' : 'bg-white shadow-md border border-slate-100'
@@ -672,7 +672,7 @@ const Chat = ({ darkMode }) => {
         </div>
       </div>
 
-      {/* Typing indicator */}
+      {}
       <AnimatePresence>
         {typingUsers.length > 0 && (
           <Motion.div
@@ -699,7 +699,7 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Context Menu */}
+      {}
       <AnimatePresence>
         {contextMenuMessage && (
           <>
@@ -773,7 +773,7 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Lightbox */}
+      {}
       <AnimatePresence>
         {lightboxImage && (
           <Motion.div
@@ -798,7 +798,7 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Emoji Picker */}
+      {}
       <AnimatePresence>
         {showEmojiPicker && (
           <>
@@ -823,7 +823,7 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Reply/Edit banner */}
+      {}
       <AnimatePresence>
         {(replyingToMessage || editingMessage) && (
           <Motion.div
@@ -859,12 +859,12 @@ const Chat = ({ darkMode }) => {
         )}
       </AnimatePresence>
 
-      {/* Input area */}
+      {}
       <div className={`flex-shrink-0 border-t ${
         darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
       }`}>
         <form onSubmit={handleSend} className="max-w-3xl mx-auto px-3 sm:px-5 py-2.5">
-          {/* Attachment previews */}
+          {}
           <AnimatePresence>
             {(selectedImage || audioBlob) && (
               <Motion.div
@@ -915,17 +915,16 @@ const Chat = ({ darkMode }) => {
             )}
           </AnimatePresence>
 
-          {/* Input row */}
+          {}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <input
               type="file"
               className="hidden"
               ref={fileInputRef}
               onChange={(e) => setSelectedImage(e.target.files?.[0])}
-              accept="image/*"
-            />
+              accept="image
 
-            {/* Attach button */}
+}
             <button
               type="button"
               onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false); }}
@@ -937,7 +936,7 @@ const Chat = ({ darkMode }) => {
               <ImageIcon size={20} />
             </button>
 
-            {/* Emoji */}
+            {}
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -948,7 +947,7 @@ const Chat = ({ darkMode }) => {
               <Smile size={20} />
             </button>
 
-            {/* Text input */}
+            {}
             <div className="flex-1 min-w-0">
               {isRecording ? (
                 <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
@@ -975,7 +974,7 @@ const Chat = ({ darkMode }) => {
               )}
             </div>
 
-            {/* Voice / Stop recording */}
+            {}
             <button
               type="button"
               onClick={isRecording ? stopRecording : startRecording}
@@ -991,7 +990,7 @@ const Chat = ({ darkMode }) => {
               {isRecording ? <Square size={18} /> : <Mic size={20} />}
             </button>
 
-            {/* Send button */}
+            {}
             <button
               type="submit"
               disabled={isSending || !canSend}

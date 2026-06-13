@@ -2,106 +2,233 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================================
+   EventHub design tokens
+   Electric blue brand + warm coral accent, neutrals tinted toward the blue
+   hue. Light-led; .dark overrides give a fully themed dark mode.
+   ========================================================================= */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* fonts */
+  --eh-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --eh-body: 'Hanken Grotesk Variable', system-ui, sans-serif;
+  --eh-mono: ui-monospace, 'SF Mono', Consolas, monospace;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* brand */
+  --eh-brand: oklch(0.58 0.215 256);
+  --eh-brand-hover: oklch(0.5 0.2 256);
+  --eh-brand-soft: color-mix(in oklch, var(--eh-brand) 12%, transparent);
+  --eh-on-brand: oklch(0.99 0.01 256);
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  /* warm accent — used sparingly (~10%) */
+  --eh-accent: oklch(0.7 0.18 40);
+  --eh-accent-hover: oklch(0.63 0.17 38);
+  --eh-accent-soft: color-mix(in oklch, var(--eh-accent) 14%, transparent);
+
+  /* surfaces (neutrals tinted toward brand hue) */
+  --eh-page: oklch(0.985 0.006 256);
+  --eh-surface: oklch(0.997 0.003 256);
+  --eh-surface-2: oklch(0.965 0.008 256);
+  --eh-border: oklch(0.91 0.012 256);
+
+  /* text */
+  --eh-text: oklch(0.22 0.03 262);
+  --eh-text-soft: oklch(0.46 0.03 260);
+  --eh-text-muted: oklch(0.62 0.022 258);
+
+  --eh-shadow-sm: 0 1px 2px oklch(0.4 0.05 262 / 0.06), 0 2px 8px oklch(0.4 0.05 262 / 0.05);
+  --eh-shadow-lg: 0 24px 48px -28px oklch(0.35 0.08 262 / 0.45);
+  --eh-ring: 0 0 0 3px color-mix(in oklch, var(--eh-brand) 35%, transparent);
+
+  /* legacy vars still referenced by older pages */
+  --text: var(--eh-text-soft);
+  --text-h: var(--eh-text);
+  --bg: var(--eh-page);
+  --border: var(--eh-border);
+  --accent: var(--eh-brand);
+  --code-bg: var(--eh-surface-2);
+
   color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
+.dark {
+  --eh-brand: oklch(0.66 0.19 256);
+  --eh-brand-hover: oklch(0.72 0.18 256);
+  --eh-on-brand: oklch(0.16 0.03 264);
+
+  --eh-accent: oklch(0.73 0.17 42);
+  --eh-accent-hover: oklch(0.79 0.16 44);
+
+  --eh-page: oklch(0.17 0.025 264);
+  --eh-surface: oklch(0.21 0.028 264);
+  --eh-surface-2: oklch(0.25 0.03 264);
+  --eh-border: oklch(0.31 0.03 264);
+
+  --eh-text: oklch(0.96 0.012 258);
+  --eh-text-soft: oklch(0.78 0.02 258);
+  --eh-text-muted: oklch(0.62 0.02 258);
+
+  --eh-shadow-lg: 0 24px 48px -28px oklch(0 0 0 / 0.6);
+}
+
+/* =========================================================================
+   Base
+   ========================================================================= */
 body {
   margin: 0;
-  background: #ffffff;
-  color: #0a1f6e;
+  font-family: var(--eh-body);
+  font-size: 17px;
+  line-height: 1.55;
+  letter-spacing: 0.1px;
+  background: var(--eh-page);
+  color: var(--eh-text);
 }
 
 #root {
   width: 100%;
-  max-width: 100%;
   margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
+h1, h2, h3, h4 {
+  font-family: var(--eh-display);
+  color: var(--eh-text);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+p { margin: 0; }
 
+code, .counter {
+  font-family: var(--eh-mono);
+  font-size: 0.9em;
+  border-radius: 6px;
+  color: var(--eh-text);
+}
 code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  padding: 2px 6px;
+  background: var(--eh-surface-2);
 }
 
-/* Force Tailwind slate/gray text classes to inherit the current theme text color */
+::selection {
+  background: color-mix(in oklch, var(--eh-brand) 25%, transparent);
+}
+
+/* =========================================================================
+   Reusable component classes (the shared token layer pages build on)
+   ========================================================================= */
+@layer components {
+  .eh-display { font-family: var(--eh-display); font-weight: 700; letter-spacing: -0.025em; }
+  .eh-body { font-family: var(--eh-body); }
+
+  .eh-text      { color: var(--eh-text); }
+  .eh-text-soft { color: var(--eh-text-soft); }
+  .eh-text-muted{ color: var(--eh-text-muted); }
+  .eh-text-brand{ color: var(--eh-brand); }
+  .eh-text-accent{ color: var(--eh-accent); }
+
+  .eh-page-bg { background: var(--eh-page); color: var(--eh-text); }
+
+  .eh-surface {
+    background: var(--eh-surface);
+    border: 1px solid var(--eh-border);
+    color: var(--eh-text);
+  }
+
+  /* eyebrow / category label */
+  .eh-eyebrow {
+    font-family: var(--eh-body);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--eh-text-muted);
+  }
+
+  .eh-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--eh-brand-soft);
+    color: var(--eh-brand);
+  }
+  .eh-chip-accent { background: var(--eh-accent-soft); color: var(--eh-accent); }
+
+  .eh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.9rem;
+    padding: 0.8rem 1.4rem;
+    font-family: var(--eh-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  }
+  .eh-btn:active { transform: translateY(1px) scale(0.99); }
+  .eh-btn:focus-visible { outline: none; box-shadow: var(--eh-ring); }
+
+  .eh-btn-primary {
+    background: var(--eh-brand);
+    color: var(--eh-on-brand);
+    box-shadow: 0 8px 20px -10px color-mix(in oklch, var(--eh-brand) 70%, transparent);
+  }
+  .eh-btn-primary:hover { background: var(--eh-brand-hover); transform: translateY(-1px); }
+
+  .eh-btn-accent {
+    background: var(--eh-accent);
+    color: oklch(0.2 0.03 40);
+    box-shadow: 0 8px 20px -10px color-mix(in oklch, var(--eh-accent) 70%, transparent);
+  }
+  .eh-btn-accent:hover { background: var(--eh-accent-hover); transform: translateY(-1px); }
+
+  .eh-btn-ghost {
+    background: var(--eh-surface);
+    border-color: var(--eh-border);
+    color: var(--eh-text);
+  }
+  .eh-btn-ghost:hover { background: var(--eh-surface-2); transform: translateY(-1px); }
+
+  .eh-link {
+    color: var(--eh-brand);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .eh-link:hover { color: var(--eh-brand-hover); }
+}
+
+/* Hide scrollbar but keep scrolling (used by horizontal filter rows on mobile) */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Legacy: force Tailwind slate/gray text classes to inherit theme color.
+   Still load-bearing for pages not yet migrated to the eh-* token classes.
+   Remove once every page uses the token layer. */
 [class*='text-slate-'],
 [class*='text-gray-'] {
   color: inherit !important;
 }
-.dark [class*='text-slate-'],
-.dark [class*='text-gray-'] {
-  color: inherit !important;
+
+/* Reduced-motion users get no transform/transition surprises */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

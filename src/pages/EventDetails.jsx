@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Share2, Heart, Users, ArrowRight, CalendarPlus, User, MessageSquare, Clock, Edit3, X, Image as ImageIcon, AlertTriangle, Landmark } from 'lucide-react';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { MapPin, Calendar, Share2, Heart, Users, ArrowRight, CalendarPlus, User, MessageSquare, Clock, Edit3, X, Image as ImageIcon, AlertTriangle, Landmark, Ticket, Plus, Trash2 } from 'lucide-react';
+
+const TIER_COLORS = ['#d4a017', '#7c3aed', '#2563eb', '#0d9488', '#db2777', '#dc2626'];
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -53,6 +55,7 @@ const formatEventDateTime = (startDate, startTime, endDate, endTime) => {
 const EventDetails = ({ darkMode }) => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useContext(AuthContext);
   const [event, setEvent] = useState(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -66,6 +69,7 @@ const EventDetails = ({ darkMode }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showEventDeleteConfirm, setShowEventDeleteConfirm] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, status: 'upcoming' });
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -144,11 +148,13 @@ const EventDetails = ({ darkMode }) => {
     return () => clearInterval(interval);
   }, [event?.date, event?.endDate]);
 
-  const glassStyle = darkMode
-    ? 'bg-slate-800 border-slate-700'
-    : 'bg-white border-slate-200';
+  const glassStyle = 'bg-surface border-line';
 
-  const inputStyle = `w-full px-5 py-3.5 rounded-2xl text-sm font-medium border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${darkMode ? 'bg-slate-950/50 border-slate-700 focus:border-blue-500 focus:bg-slate-900 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400'}`;
+  const inputStyle = "w-full rounded-2xl border border-line bg-surface-2 px-4 py-3.5 text-sm font-medium eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]";
+
+  const addEditTier = () => setEditForm(f => ({ ...f, ticketTiers: [...(f.ticketTiers || []), { name: '', price: 0, capacity: '', color: TIER_COLORS[(f.ticketTiers?.length || 0) % TIER_COLORS.length], perks: '' }] }));
+  const updateEditTier = (idx, key, value) => setEditForm(f => ({ ...f, ticketTiers: (f.ticketTiers || []).map((t, i) => (i === idx ? { ...t, [key]: value } : t)) }));
+  const removeEditTier = (idx) => setEditForm(f => ({ ...f, ticketTiers: (f.ticketTiers || []).filter((_, i) => i !== idx) }));
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -173,11 +179,14 @@ const EventDetails = ({ darkMode }) => {
         if (dataToSubmit.location) {
           formData.append('location', typeof dataToSubmit.location === 'object' ? JSON.stringify(dataToSubmit.location) : dataToSubmit.location);
         }
+        if (dataToSubmit.ticketTiers) {
+          formData.append('ticketTiers', JSON.stringify(dataToSubmit.ticketTiers));
+        }
         formData.append('coverImage', editingCoverImage);
         payload = formData;
       } else {
         payload = {};
-        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'bankName', 'accountNumber', 'accountName'];
+        const safeKeys = ['title', 'description', 'date', 'time', 'endDate', 'endTime', 'price', 'capacity', 'category', 'status', 'isPublic', 'approvalRequired', 'ticketTiers', 'bankName', 'accountNumber', 'accountName'];
         safeKeys.forEach(key => {
           if (dataToSubmit[key] !== undefined && dataToSubmit[key] !== null) payload[key] = dataToSubmit[key];
         });
@@ -317,8 +326,8 @@ const EventDetails = ({ darkMode }) => {
             <AlertTriangle size={32} />
           </div>
           <h2 className="text-2xl font-black mb-4 text-red-500">An Error Occurred</h2>
-          <p className={`text-sm font-medium mb-8 ${darkMode ? 'text-white' : 'text-slate-600'}`}>{error}</p>
-          <Link to="/events" className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors">
+          <p className={`text-sm font-medium mb-8 eh-text-soft`}>{error}</p>
+          <Link to="/events" className="eh-btn eh-btn-primary">
             Back to Events
           </Link>
         </div>
@@ -332,15 +341,15 @@ const EventDetails = ({ darkMode }) => {
         className="pt-24 pb-20 px-4 md:px-8 max-w-7xl mx-auto"
       >
         <div className="space-y-8 animate-pulse">
-          <div className={`rounded-[2.5rem] h-[42vh] min-h-[320px] ${darkMode ? 'bg-slate-800/50' : 'bg-slate-200'}`} />
+          <div className={`rounded-[2.5rem] h-[42vh] min-h-[320px] bg-surface-2`} />
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_0.95fr] gap-8">
             <div className="space-y-8">
-              <div className={`rounded-[2rem] h-64 border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
-              <div className={`rounded-[2rem] h-32 border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
+              <div className={`rounded-[2rem] h-64 border border-line bg-surface-2`} />
+              <div className={`rounded-[2rem] h-32 border border-line bg-surface-2`} />
             </div>
             <div className="space-y-6">
-              <div className={`rounded-[2rem] h-[340px] border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
-              <div className={`rounded-[2rem] h-48 border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`} />
+              <div className={`rounded-[2rem] h-[340px] border border-line bg-surface-2`} />
+              <div className={`rounded-[2rem] h-48 border border-line bg-surface-2`} />
             </div>
           </div>
         </div>
@@ -440,8 +449,8 @@ const EventDetails = ({ darkMode }) => {
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_0.95fr] gap-8">
           <div className="space-y-8">
             <section className={`rounded-[2rem] border ${glassStyle} p-8`}> 
-              <h2 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>About this event</h2>
-              <p className={`text-sm font-medium leading-relaxed mb-6 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
+              <h2 className={`text-2xl font-black mb-4 eh-text`}>About this event</h2>
+              <p className={`text-sm font-medium leading-relaxed mb-6 eh-text-soft`}>
                 {event.description}
               </p>
             </section>
@@ -455,8 +464,8 @@ const EventDetails = ({ darkMode }) => {
                     <img src={organizer.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${organizer.fullName || 'Organizer'}`} alt="Organizer" className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <p className={`text-xs font-black uppercase tracking-widest mb-1 ${darkMode ? 'text-white' : 'text-slate-500'}`}>Hosted By</p>
-                    <h3 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{organizer.fullName || 'Event Organizer'}</h3>
+                    <p className={`text-xs font-black uppercase tracking-widest mb-1 eh-text-soft`}>Hosted By</p>
+                    <h3 className={`text-xl font-black eh-text`}>{organizer.fullName || 'Event Organizer'}</h3>
                   </div>
                 </section>
               );
@@ -464,18 +473,46 @@ const EventDetails = ({ darkMode }) => {
           </div>
           
           <div className="space-y-6">
-            <div className={`rounded-[2rem] border ${glassStyle} p-6`}> 
-              <h3 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                {event.price === 0 ? 'Free' : `₦${event.price}`}
-              </h3>
+            <div className={`rounded-[2rem] border ${glassStyle} p-6`}>
+              {event.ticketTiers?.length > 0 ? (
+                <div className="mb-5">
+                  <h3 className={`text-2xl font-black eh-text`}>
+                    {(() => {
+                      const min = Math.min(...event.ticketTiers.map(t => Number(t.price) || 0));
+                      return min === 0 ? 'Free' : `From ₦${min.toLocaleString()}`;
+                    })()}
+                  </h3>
+                  <p className={`mb-4 mt-0.5 text-xs font-semibold eh-text-muted`}>
+                    {event.ticketTiers.length} ticket {event.ticketTiers.length === 1 ? 'tier' : 'tiers'}
+                  </p>
+                  <div className="space-y-2">
+                    {event.ticketTiers.map((tier, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface-2 p-3">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: tier.color || '#2563eb' }} />
+                          <div className="min-w-0">
+                            <p className="truncate font-bold eh-text">{tier.name}</p>
+                            {tier.perks && <p className="truncate text-xs eh-text-muted">{tier.perks}</p>}
+                          </div>
+                        </div>
+                        <span className="shrink-0 font-bold eh-text-brand">{tier.price ? `₦${Number(tier.price).toLocaleString()}` : 'Free'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <h3 className={`text-2xl font-black mb-4 eh-text`}>
+                  {event.price === 0 ? 'Free' : `₦${event.price}`}
+                </h3>
+              )}
 
               {event.price > 0 && (event.bankName || event.accountNumber || event.accountName) && (
-                <div className={`mb-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
+                <div className={`mb-4 p-4 rounded-2xl border border-line bg-surface-2`}>
                   <div className="flex items-center gap-2 mb-3">
                     <Landmark size={16} className="text-emerald-500" />
-                    <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider eh-text`}>Payment Details</h4>
                   </div>
-                  <div className={`space-y-2 text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                  <div className={`space-y-2 text-sm eh-text-soft`}>
                     {event.bankName && (
                       <div className="flex justify-between">
                         <span className="font-semibold">Bank</span>
@@ -499,17 +536,17 @@ const EventDetails = ({ darkMode }) => {
               )}
               
               {isRegisteredOrOrganizer ? (
-                <div className={`w-full p-4 rounded-2xl border-2 border-dashed text-center ${darkMode ? 'bg-slate-800/50 border-slate-600' : 'bg-blue-50 border-blue-200'}`}>
-                  <div className={`text-sm font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
+                <div className={`w-full p-4 rounded-2xl border-2 border-dashed text-center border-line bg-surface-2`}>
+                  <div className={`text-sm font-bold mb-2 eh-text-soft`}>
                     {isOrganizer ? 'You’re the organizer of this event!' : isApprovedAttendee ? 'You\'re registered for this event!' : 'Registration pending approval'}
                   </div>
                   {countdown.status === 'ended' ? (
                     <div>
-                      <div className={`text-lg font-black flex items-center justify-center gap-2 ${darkMode ? 'text-white' : 'text-slate-400'}`}>
+                      <div className={`text-lg font-black flex items-center justify-center gap-2 eh-text-muted`}>
                         <span className="w-2 h-2 rounded-full bg-slate-400" />
                         Event has ended
                       </div>
-                      <div className={`text-xs font-semibold mt-1 text-center ${darkMode ? 'text-white' : 'text-slate-500'}`}>
+                      <div className={`text-xs font-semibold mt-1 text-center eh-text-soft`}>
                         {(() => {
                           const endTime = event.endDate ? new Date(event.endDate) : new Date(event.date);
                           const diffMs = new Date() - endTime;
@@ -530,44 +567,55 @@ const EventDetails = ({ darkMode }) => {
                     </div>
                   ) : (
                     <div className="flex justify-center gap-4 text-lg font-black">
-                      <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        <div className="text-2xl font-black text-blue-600">{countdown.days}</div>
-                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Days</div>
+                      <div className={`text-center eh-text`}>
+                        <div className="text-2xl font-black text-brand">{countdown.days}</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider eh-text-soft`}>Days</div>
                       </div>
-                      <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        <div className="text-2xl font-black text-blue-600">{countdown.hours}</div>
-                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Hours</div>
+                      <div className={`text-center eh-text`}>
+                        <div className="text-2xl font-black text-brand">{countdown.hours}</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider eh-text-soft`}>Hours</div>
                       </div>
-                      <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        <div className="text-2xl font-black text-blue-600">{countdown.minutes}</div>
-                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Min</div>
+                      <div className={`text-center eh-text`}>
+                        <div className="text-2xl font-black text-brand">{countdown.minutes}</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider eh-text-soft`}>Min</div>
                       </div>
-                      <div className={`text-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                        <div className="text-2xl font-black text-blue-600">{countdown.seconds}</div>
-                        <div className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-500'}`}>Sec</div>
+                      <div className={`text-center eh-text`}>
+                        <div className="text-2xl font-black text-brand">{countdown.seconds}</div>
+                        <div className={`text-xs font-bold uppercase tracking-wider eh-text-soft`}>Sec</div>
                       </div>
                     </div>
                   )}
                 </div>
-              ) : (
-                <Link 
-                  to={isSoldOut ? '#' : `/event-registration/${eventId}`} 
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-black text-white shadow-lg transition-all ${isSoldOut ? 'bg-slate-500 cursor-not-allowed shadow-none pointer-events-none' : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-blue-600/20 hover:shadow-blue-500/40 hover:-translate-y-0.5'}`}
+              ) : isSoldOut ? (
+                <button disabled className="inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-slate-500 px-5 py-4 text-sm font-black text-white">
+                  Sold Out
+                </button>
+              ) : user ? (
+                <Link
+                  to={`/event-registration/${eventId}`}
+                  className="eh-btn eh-btn-primary w-full py-4 text-sm font-black"
                 >
-                  {isSoldOut ? 'Sold Out' : 'Register & Upload Receipt'}
+                  Register & Upload Receipt
                 </Link>
+              ) : (
+                <button
+                  onClick={() => setShowAuthPrompt(true)}
+                  className="eh-btn eh-btn-primary w-full py-4 text-sm font-black"
+                >
+                  Register & Upload Receipt
+                </button>
               )}
 
               <div className="grid grid-cols-2 gap-3 mt-3">
                 <button 
                   onClick={handleAddToCalendar}
-                  className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-black transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+                  className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-black transition-colors border-line bg-surface-2 eh-text hover:bg-line`}
                 >
                   <CalendarPlus size={18} /> Google Cal
                 </button>
                 <button 
                   onClick={handleDownloadICS}
-                  className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-black transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+                  className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-xs sm:text-sm font-black transition-colors border-line bg-surface-2 eh-text hover:bg-line`}
                 >
                   <CalendarPlus size={18} /> Apple/Outlook
                 </button>
@@ -576,7 +624,7 @@ const EventDetails = ({ darkMode }) => {
               {hasChatAccess && (
                 <Link 
                   to={`/chat/${eventId}`}
-                  className={`mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-4 text-sm font-black transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+                  className={`mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-4 text-sm font-black transition-colors border-line bg-surface-2 eh-text hover:bg-line`}
                 >
                   <div className="relative">
                     <MessageSquare size={18} />
@@ -594,8 +642,8 @@ const EventDetails = ({ darkMode }) => {
 
             {event.location?.coordinates && (
               <div className={`rounded-[2rem] border ${glassStyle} p-6`}> 
-                <h3 className={`text-lg font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Event Location</h3>
-              <div className={`w-full h-64 rounded-xl overflow-hidden relative shadow-inner ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-slate-100'}`}>
+                <h3 className={`text-lg font-black mb-4 eh-text`}>Event Location</h3>
+              <div className={`w-full h-64 rounded-xl overflow-hidden relative shadow-inner border-line bg-surface-2`}>
                 <MapContainer 
                   center={[event.location.coordinates[1], event.location.coordinates[0]]} 
                   zoom={14} 
@@ -610,7 +658,7 @@ const EventDetails = ({ darkMode }) => {
                     <Popup className="rounded-xl">
                       <div className="p-1">
                         <p className="font-bold text-[13px] mb-1">{event.title}</p>
-                        <p className={`text-[10px] leading-tight ${darkMode ? 'text-white' : 'text-slate-500'}`}>{event.location.formattedAddress}</p>
+                        <p className={`text-[10px] leading-tight eh-text-soft`}>{event.location.formattedAddress}</p>
                       </div>
                     </Popup>
                   </Marker>
@@ -620,7 +668,7 @@ const EventDetails = ({ darkMode }) => {
                   href={`https://www.google.com/maps/dir/?api=1&destination=${event.location.coordinates[1]},${event.location.coordinates[0]}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`mt-4 w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 text-sm font-bold transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700' : 'border-slate-200 bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+                  className={`mt-4 w-full inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 text-sm font-bold transition-colors border-line bg-surface-2 eh-text hover:bg-line`}
                 >
                   <MapPin size={16} /> Get Directions
                 </a>
@@ -649,16 +697,16 @@ const EventDetails = ({ darkMode }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-lg p-6 rounded-[2rem] shadow-2xl border max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+              className={`w-full max-w-lg p-6 rounded-[2rem] shadow-2xl border max-h-[90vh] overflow-y-auto border-line bg-surface`}
             >
               <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Quick Edit Event</h2>
-                <button onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <h2 className={`text-xl font-black eh-text`}>Quick Edit Event</h2>
+                <button onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors eh-text`}>
                   <X size={20} />
                 </button>
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
-                <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 bg-slate-50'}`}>
+                <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors relative overflow-hidden group border-line bg-surface-2 hover:border-brand`}>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => setEditingCoverImage(e.target.files[0])} />
                   <img src={editingCoverImage ? URL.createObjectURL(editingCoverImage) : (editForm.coverImage || '/placeholder.png')} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
                   <div className="relative z-10 bg-black/40 backdrop-blur-sm p-2 rounded-lg inline-block">
@@ -667,71 +715,143 @@ const EventDetails = ({ darkMode }) => {
                   </div>
                 </label>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Event Title</label>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>Event Title</label>
                   <input type="text" value={editForm.title || ''} onChange={e => setEditForm({...editForm, title: e.target.value})} className={inputStyle} required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Date</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>Date</label>
                     <input type="date" value={editForm.date ? editForm.date.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className={inputStyle} required />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Time</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>Time</label>
                     <input type="time" value={editForm.time || ''} onChange={e => setEditForm({...editForm, time: e.target.value})} className={inputStyle} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>End Date</label>
                     <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className={inputStyle} />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>End Time</label>
                     <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({...editForm, endTime: e.target.value})} className={inputStyle} />
                   </div>
                 </div>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Location</label>
+                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>Location</label>
                   <input type="text" value={typeof editForm.location === 'object' ? editForm.location?.formattedAddress : (editForm.location || '')} onChange={e => setEditForm({...editForm, location: e.target.value})} className={inputStyle} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Price (₦)</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>Price (₦)</label>
                     <input type="number" value={editForm.price || 0} onChange={e => setEditForm({...editForm, price: e.target.value})} className={inputStyle} />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Capacity</label>
+                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 eh-text-soft`}>Capacity</label>
                     <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className={inputStyle} placeholder="Unlimited" />
                   </div>
                 </div>
                 {Number(editForm.price) > 0 && (
-                  <div className={`mt-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
+                  <div className={`mt-4 p-4 rounded-2xl border border-line bg-surface-2`}>
                     <div className="flex items-center gap-2 mb-3">
                       <Landmark size={16} className="text-emerald-500" />
-                      <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                      <h4 className={`text-xs font-bold uppercase tracking-wider eh-text`}>Payment Details</h4>
                     </div>
                     <div className="space-y-3">
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Bank Name</label>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 eh-text-soft`}>Bank Name</label>
                         <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} className={inputStyle} placeholder="e.g., GTBank" />
                       </div>
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Number</label>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 eh-text-soft`}>Account Number</label>
                         <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({...editForm, accountNumber: e.target.value})} className={inputStyle} placeholder="e.g., 0123456789" />
                       </div>
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Name</label>
+                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 eh-text-soft`}>Account Name</label>
                         <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({...editForm, accountName: e.target.value})} className={inputStyle} placeholder="e.g., John Doe" />
                       </div>
                     </div>
                   </div>
                 )}
+
+                <div className={`mt-4 rounded-2xl border p-4 border-line bg-surface-2`}>
+                  <div className="mb-1 flex items-center gap-2">
+                    <Ticket size={16} className="text-blue-500" />
+                    <h4 className={`text-xs font-bold uppercase tracking-wider eh-text`}>Ticket Tiers</h4>
+                  </div>
+                  <p className={`mb-4 text-xs eh-text-muted`}>Optional. VIP/VVIP levels, each with its own price and colour.</p>
+
+                  {(editForm.ticketTiers || []).length > 0 && (
+                    <div className="space-y-3">
+                      {(editForm.ticketTiers || []).map((tier, idx) => (
+                        <div key={idx} className={`rounded-xl border p-3 border-line bg-surface`}>
+                          <div className="mb-2 flex items-center gap-2">
+                            {TIER_COLORS.map((c) => (
+                              <button key={c} type="button" aria-label={`Set tier colour ${c}`} onClick={() => updateEditTier(idx, 'color', c)} style={{ background: c }} className={`h-5 w-5 rounded-full transition ${tier.color === c ? `ring-2 ring-blue-500 ring-offset-2 ring-offset-surface` : 'opacity-60 hover:opacity-100'}`} />
+                            ))}
+                            <button type="button" onClick={() => removeEditTier(idx)} aria-label="Remove tier" className="ml-auto grid h-7 w-7 place-items-center rounded-full text-slate-400 transition hover:bg-red-500/10 hover:text-red-500"><Trash2 size={14} /></button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <input value={tier.name || ''} onChange={(e) => updateEditTier(idx, 'name', e.target.value)} placeholder="Name (e.g. VIP)" className={inputStyle} />
+                            <input type="number" value={tier.price ?? 0} onChange={(e) => updateEditTier(idx, 'price', e.target.value)} placeholder="Price (₦)" className={inputStyle} />
+                            <input type="number" value={tier.capacity || ''} onChange={(e) => updateEditTier(idx, 'capacity', e.target.value)} placeholder="Capacity" className={inputStyle} />
+                          </div>
+                          <input value={tier.perks || ''} onChange={(e) => updateEditTier(idx, 'perks', e.target.value)} placeholder="Perks (optional)" className={`${inputStyle} mt-2`} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button type="button" onClick={addEditTier} className={`mt-3 inline-flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 text-xs font-bold transition border-line eh-text hover:border-brand`}>
+                    <Plus size={14} /> Add tier
+                  </button>
+                </div>
+
                 <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>Cancel</button>
+                  <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border border-line bg-surface-2 eh-text hover:bg-line`}>Cancel</button>
                   <button type="button" onClick={handleDeleteEvent} disabled={isSaving || !hasHappened} title={!hasHappened ? "Events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>Delete</button>
-                  <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">{isSaving ? 'Saving...' : 'Save'}</button>
+                  <button type="submit" disabled={isSaving} className="eh-btn eh-btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Saving…' : 'Save'}</button>
                 </div>
               </form>
+            </Motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Auth prompt for guests trying to register */}
+      <AnimatePresence>
+        {showAuthPrompt && (
+          <div className="fixed inset-0 z-[102] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowAuthPrompt(false)}>
+            <Motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="eh-surface w-full max-w-sm rounded-[1.75rem] p-8 text-center shadow-eh-lg"
+            >
+              <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-brand">
+                <Users size={24} />
+              </div>
+              <h3 className="eh-display text-xl font-bold">Join to reserve your spot</h3>
+              <p className="mt-2 text-sm eh-text-soft">Create a free account or sign in to register for this event. It only takes a minute.</p>
+              <div className="mt-6 space-y-3">
+                <button
+                  onClick={() => navigate('/register', { state: { from: { pathname: location.pathname } } })}
+                  className="eh-btn eh-btn-primary w-full"
+                >
+                  Create account
+                </button>
+                <button
+                  onClick={() => navigate('/login', { state: { from: { pathname: location.pathname } } })}
+                  className="eh-btn eh-btn-ghost w-full"
+                >
+                  I already have an account
+                </button>
+              </div>
+              <button onClick={() => setShowAuthPrompt(false)} className="mt-4 text-xs font-semibold text-ink-muted transition-colors hover:text-ink-soft">
+                Maybe later
+              </button>
             </Motion.div>
           </div>
         )}
@@ -745,19 +865,19 @@ const EventDetails = ({ darkMode }) => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-md p-6 rounded-[2rem] shadow-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+              className={`w-full max-w-md p-6 rounded-[2rem] shadow-2xl border border-line bg-surface`}
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 flex-shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
                   <AlertTriangle size={24} />
                 </div>
                 <div>
-                  <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Delete Event</h2>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
+                  <h2 className={`text-xl font-black eh-text`}>Delete Event</h2>
+                  <p className={`text-sm mt-1 eh-text-soft`}>Are you sure? This action is permanent.</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowEventDeleteConfirm(false)} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
+                <button onClick={() => setShowEventDeleteConfirm(false)} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border border-line bg-surface-2 eh-text hover:bg-line`}>
                   Cancel
                 </button>
                 <button onClick={confirmDeleteEvent} disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 disabled:opacity-50">

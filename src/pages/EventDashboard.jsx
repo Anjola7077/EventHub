@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
- import { Users, CalendarCheck, CreditCard, TrendingUp, Download, Settings, Search, Copy, Check, Edit3, X, Image as ImageIcon, AlertTriangle, Megaphone, Landmark } from 'lucide-react';
+import { Users, CalendarCheck, CreditCard, TrendingUp, Download, Search, Copy, Check, Edit3, X, Image as ImageIcon, AlertTriangle, Megaphone, Landmark, Ticket, Plus, Trash2 } from 'lucide-react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
@@ -31,6 +31,25 @@ ChartJS.register(
   Filler
 );
 
+const CHART_FONT = "'Hanken Grotesk Variable'";
+const TIER_COLORS = ['#d4a017', '#7c3aed', '#2563eb', '#0d9488', '#db2777', '#dc2626'];
+
+const DashboardSkeleton = () => (
+  <main className="eh-page-bg min-h-screen px-4 pb-20 pt-28 sm:px-6 md:pt-32">
+    <div className="mx-auto max-w-7xl animate-pulse space-y-5">
+      <div className="h-28 rounded-[2rem] bg-surface-2" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-28 rounded-3xl bg-surface-2 sm:h-32" />)}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="h-72 rounded-[2rem] bg-surface-2 lg:col-span-2" />
+        <div className="h-72 rounded-[2rem] bg-surface-2" />
+      </div>
+      <div className="h-80 rounded-[2rem] bg-surface-2" />
+    </div>
+  </main>
+);
+
 const EventDashboard = ({ darkMode }) => {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -54,6 +73,7 @@ const EventDashboard = ({ darkMode }) => {
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastForm, setBroadcastForm] = useState({ title: '', message: '' });
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [activeTab, setActiveTab] = useState('analytics');
 
   const filteredAttendees = attendees.filter(att => {
     if (!att) return false;
@@ -74,11 +94,11 @@ const EventDashboard = ({ darkMode }) => {
     if (node) observer.current.observe(node);
   }, [visibleCount, filteredAttendees.length]);
 
-  const glassStyle = darkMode 
-    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]' 
-    : 'bg-white/40 border-white/40 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.1)]';
-    
-  const inputStyle = `w-full px-5 py-3.5 rounded-2xl text-sm font-medium border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${darkMode ? 'bg-slate-900/50 border-slate-700 focus:border-blue-500 focus:bg-slate-900 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 focus:border-blue-500 focus:bg-white text-slate-900 placeholder-slate-400'}`;
+  const inputStyle = 'w-full rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-medium eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]';
+
+  const addEditTier = () => setEditForm(f => ({ ...f, ticketTiers: [...(f.ticketTiers || []), { name: '', price: 0, capacity: '', color: TIER_COLORS[(f.ticketTiers?.length || 0) % TIER_COLORS.length], perks: '' }] }));
+  const updateEditTier = (idx, key, value) => setEditForm(f => ({ ...f, ticketTiers: (f.ticketTiers || []).map((t, i) => (i === idx ? { ...t, [key]: value } : t)) }));
+  const removeEditTier = (idx) => setEditForm(f => ({ ...f, ticketTiers: (f.ticketTiers || []).filter((_, i) => i !== idx) }));
 
   const fetchEventStats = async () => {
     if (!isRefreshing) setLoading(true);
@@ -149,14 +169,14 @@ const EventDashboard = ({ darkMode }) => {
 
   const handleExportCSV = () => {
     if (!attendees.length) return alert("No attendees to export");
-    
+
     let csvContent = "data:text/csv;charset=utf-8,Name,Email,Ticket,Status\n";
     attendees.forEach(row => {
       const name = row.user?.fullName || row.fullName || 'Unknown';
       const email = row.user?.email || row.email || 'Unknown';
       csvContent += `${name},${email},${row.type || row.ticketType || 'Standard'},${row.isVerified !== false ? 'Paid' : 'Pending'}\n`;
     });
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -252,9 +272,12 @@ const EventDashboard = ({ darkMode }) => {
         }
       }
 
-      const res = await api.put(`/events/${eventData._id || eventData.id}`, payload, config);
-      
-      setEventData(prev => ({ ...prev, ...res.data.data }));
+      const editedId = editForm._id || editForm.id || eventData._id || eventData.id;
+      const res = await api.put(`/events/${editedId}`, payload, config);
+
+      if (editedId === (eventData._id || eventData.id)) {
+        setEventData(prev => ({ ...prev, ...res.data.data }));
+      }
       setIsEditing(false);
       setEditingCoverImage(null);
       fetchEventStats(); // refresh full stats just in case
@@ -274,10 +297,15 @@ const EventDashboard = ({ darkMode }) => {
     if (!eventData) return;
     setIsSaving(true);
     try {
-      await api.delete(`/events/${eventData._id || eventData.id}`);
+      const delId = editForm._id || editForm.id || eventData._id || eventData.id;
+      await api.delete(`/events/${delId}`);
       setShowEventDeleteConfirm(false);
       setIsEditing(false);
-      navigate('/profile');
+      if (delId === eventId) {
+        navigate('/dashboard');
+      } else {
+        fetchEventStats();
+      }
     } catch (error) {
       console.error("Delete failed", error);
       alert("Failed to delete event.");
@@ -301,26 +329,24 @@ const EventDashboard = ({ darkMode }) => {
     }
   };
 
-  if (loading) return <div className="pt-32 text-center font-bold dark:text-white">Loading Stats...</div>;
+  if (loading) return <DashboardSkeleton />;
   if (!eventData) {
     return (
-      <Motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-40 pb-20 px-6 max-w-xl mx-auto text-center">
-        <div className={`p-12 rounded-[2.5rem] border ${glassStyle}`}>
-          <h2 className={`text-2xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>No events found</h2>
-          <p className={`text-sm font-medium mb-8 ${darkMode ? 'text-white' : 'text-slate-600'}`}>You haven't created any events yet, or the event you're looking for doesn't exist.</p>
-          <Link to="/create-event" className="inline-flex items-center justify-center gap-2 rounded-full bg-blue-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors">
-            Create your first event
-          </Link>
+      <Motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="eh-page-bg min-h-screen px-6 pb-20 pt-36 text-center">
+        <div className="eh-surface mx-auto max-w-xl rounded-[2.5rem] p-12 shadow-eh-lg">
+          <h2 className="eh-display text-2xl font-extrabold">No events found</h2>
+          <p className="mx-auto mt-3 mb-8 max-w-sm text-sm eh-text-soft">You haven’t created any events yet, or the event you’re looking for doesn’t exist.</p>
+          <Link to="/create-event" className="eh-btn eh-btn-primary">Create your first event</Link>
         </div>
       </Motion.main>
     );
   }
 
   const stats = [
-    { title: 'Total Attendees', value: eventData.ticketsSold || 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/20' },
-    { title: 'Tickets Available', value: eventData.capacity ? (eventData.capacity - (eventData.ticketsSold || 0)) : 'Unlimited', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/20' },
-    { title: 'Page Views', value: eventData.views || 0, icon: CalendarCheck, color: 'text-amber-500', bg: 'bg-amber-500/20' },
-    { title: 'Revenue', value: `₦${(eventData.isOverview ? (eventData.totalRevenue || 0) : ((eventData.ticketsSold || 0) * (eventData.price || 0))).toLocaleString()}`, icon: CreditCard, color: 'text-purple-500', bg: 'bg-purple-500/20' },
+    { title: 'Total Attendees', value: eventData.ticketsSold || 0, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/15' },
+    { title: 'Tickets Available', value: eventData.capacity ? (eventData.capacity - (eventData.ticketsSold || 0)) : 'Unlimited', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/15' },
+    { title: 'Page Views', value: eventData.views || 0, icon: CalendarCheck, color: 'text-amber-500', bg: 'bg-amber-500/15' },
+    { title: 'Revenue', value: `₦${(eventData.isOverview ? (eventData.totalRevenue || 0) : ((eventData.ticketsSold || 0) * (eventData.price || 0))).toLocaleString()}`, icon: CreditCard, color: 'text-purple-500', bg: 'bg-purple-500/15' },
   ];
 
   // Group attendees by ticket type for the Doughnut chart
@@ -335,7 +361,7 @@ const EventDashboard = ({ darkMode }) => {
     labels: Object.keys(ticketTypes).length ? Object.keys(ticketTypes) : ['No Data'],
     datasets: [{
       data: Object.keys(ticketTypes).length ? Object.values(ticketTypes) : [1],
-      backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(245, 158, 11, 0.8)'],
+      backgroundColor: ['rgba(37, 99, 235, 0.85)', 'rgba(16, 185, 129, 0.85)', 'rgba(124, 58, 237, 0.85)', 'rgba(245, 158, 11, 0.85)'],
       borderColor: darkMode ? '#1e293b' : '#ffffff',
       borderWidth: 4,
     }],
@@ -345,9 +371,9 @@ const EventDashboard = ({ darkMode }) => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom', labels: { color: darkMode ? '#cbd5e1' : '#475569', padding: 20, font: { family: 'Inter', weight: 'bold' } } }
+      legend: { position: 'bottom', labels: { color: darkMode ? '#cbd5e1' : '#475569', padding: 16, font: { family: CHART_FONT, weight: 'bold' } } }
     },
-    cutout: '75%',
+    cutout: '72%',
   };
 
   // Determine days to show based on selected timeRange
@@ -379,7 +405,7 @@ const EventDashboard = ({ darkMode }) => {
   });
 
   const lineLabels = dateRangeArray.map(d => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
-  
+
   // Start the cumulative total with anyone who registered BEFORE the window
   let runningTotal = attendees.filter(att => {
     let d = new Date(att.createdAt || att.date || Date.now());
@@ -390,7 +416,7 @@ const EventDashboard = ({ darkMode }) => {
   const realSalesData = dateRangeArray.map((day) => {
     const nextDay = new Date(day);
     nextDay.setDate(nextDay.getDate() + 1);
-    
+
     // Count how many people registered on this specific day
     const salesToday = attendees.filter(att => {
       if (!att) return false;
@@ -409,10 +435,12 @@ const EventDashboard = ({ darkMode }) => {
     datasets: [{
       label: 'Cumulative Tickets Sold',
       data: realSalesData,
-      borderColor: 'rgba(59, 130, 246, 1)',
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      borderColor: 'rgba(37, 99, 235, 1)',
+      backgroundColor: 'rgba(37, 99, 235, 0.12)',
       tension: 0.4,
       fill: true,
+      pointRadius: 0,
+      pointHoverRadius: 5,
     }]
   };
 
@@ -420,11 +448,11 @@ const EventDashboard = ({ darkMode }) => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { labels: { color: darkMode ? '#cbd5e1' : '#475569', font: { family: 'Inter', weight: 'bold' } } }
+      legend: { display: false }
     },
     scales: {
-      x: { ticks: { color: darkMode ? '#cbd5e1' : '#475569' }, grid: { color: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
-      y: { ticks: { color: darkMode ? '#cbd5e1' : '#475569', stepSize: Math.max(1, Math.ceil(total / 5)) }, grid: { color: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } }
+      x: { ticks: { color: darkMode ? '#94a3b8' : '#64748b', font: { family: CHART_FONT } }, grid: { display: false } },
+      y: { ticks: { color: darkMode ? '#94a3b8' : '#64748b', font: { family: CHART_FONT }, stepSize: Math.max(1, Math.ceil(total / 5)) }, grid: { color: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' } }
     }
   };
 
@@ -432,229 +460,284 @@ const EventDashboard = ({ darkMode }) => {
 
   const hasHappened = (eventData?.endDate || eventData?.date) ? new Date(eventData.endDate || eventData.date) < new Date() : true;
 
+  const StatusBadge = ({ verified }) => (
+    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${verified !== false ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>
+      {verified !== false ? 'Paid' : 'Pending'}
+    </span>
+  );
+
   return (
-    <Motion.main 
-      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-      className="pt-32 pb-20 px-4 sm:px-6 max-w-7xl mx-auto space-y-8 overflow-x-hidden"
+    <Motion.main
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="eh-page-bg min-h-screen overflow-x-hidden px-4 pb-20 pt-28 sm:px-6 md:pt-32"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Pull to refresh indicator UI */}
-      <div 
-        className="flex justify-center overflow-hidden transition-all duration-200"
-        style={{ height: `${pullDistance}px`, opacity: pullDistance / 80 }}
-      >
-        <div className={`flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
-          <div className={`w-5 h-5 rounded-full border-2 border-t-transparent ${isRefreshing ? 'animate-spin' : ''} ${darkMode ? 'border-white' : 'border-blue-600'}`} 
-               style={{ transform: `rotate(${pullDistance * 4}deg)` }}></div>
-          <span className="text-xs font-bold">{isRefreshing ? 'Refreshing...' : 'Pull to refresh'}</span>
+      <div className="mx-auto max-w-7xl space-y-5">
+        {/* Pull to refresh indicator */}
+        <div className="flex justify-center overflow-hidden transition-all duration-200" style={{ height: `${pullDistance}px`, opacity: pullDistance / 80 }}>
+          <div className="flex items-center gap-2 eh-text-soft">
+            <div className={`h-5 w-5 rounded-full border-2 border-brand border-t-transparent ${isRefreshing ? 'animate-spin' : ''}`} style={{ transform: `rotate(${pullDistance * 4}deg)` }} />
+            <span className="text-xs font-bold">{isRefreshing ? 'Refreshing…' : 'Pull to refresh'}</span>
+          </div>
         </div>
-      </div>
 
-      <div className={`border rounded-[2rem] p-4 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 overflow-hidden ${glassStyle}`}>
-        <div className="flex-1 w-full">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div className="flex gap-2">
-              {eventData.category && (
-                <span className="px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase bg-blue-500/20 text-blue-600 dark:text-blue-400 inline-block">
-                  {eventData.category}
-                </span>
+        {/* ---- Header ---- */}
+        <div className="eh-surface flex flex-col gap-5 rounded-[2rem] p-5 sm:p-7 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {eventData.isOverview && (
+                <span className="rounded-full bg-brand-soft px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand">Overview</span>
+              )}
+              {eventData.category && !eventData.isOverview && (
+                <span className="rounded-full bg-brand-soft px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand">{eventData.category}</span>
               )}
               {eventData.status === 'draft' && (
-                <span className="px-4 py-1.5 rounded-full text-xs font-extrabold tracking-widest uppercase bg-amber-500/20 text-amber-600 dark:text-amber-400 inline-block">
-                  DRAFT
-                </span>
+                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Draft</span>
+              )}
+              {userEvents.length > 0 && (
+                <select
+                  value={eventId || 'overview'}
+                  onChange={handleEventChange}
+                  className="ml-auto max-w-[180px] rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-bold eh-text focus:border-brand focus:outline-none md:hidden"
+                >
+                  {userEvents.length > 1 && <option value="overview">All Events Overview</option>}
+                  {userEvents.map(evt => (<option key={evt._id || evt.id} value={evt._id || evt.id}>{evt.title}</option>))}
+                </select>
               )}
             </div>
+            <h1 className="eh-display truncate text-2xl font-extrabold sm:text-3xl md:text-4xl">{eventData.isOverview ? 'All events' : eventData.title}</h1>
+            {eventData.isOverview ? (
+              <p className="mt-1.5 text-sm font-semibold eh-text-soft">Aggregate stats across {userEvents.length} {userEvents.length === 1 ? 'event' : 'events'}</p>
+            ) : (eventData.date && !isNaN(new Date(eventData.date).getTime()) && (
+              <p className="mt-1.5 text-sm font-semibold eh-text-soft">{new Date(eventData.date).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             {userEvents.length > 0 && (
-              <select 
+              <select
                 value={eventId || 'overview'}
                 onChange={handleEventChange}
-                className={`max-w-[200px] text-sm font-bold rounded-xl px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+                className="hidden max-w-[200px] rounded-xl border border-line bg-surface px-3 py-2 text-sm font-bold eh-text focus:border-brand focus:outline-none md:block"
               >
                 {userEvents.length > 1 && <option value="overview">All Events Overview</option>}
-                {userEvents.map(evt => (
-                  <option key={evt._id || evt.id} value={evt._id || evt.id}>
-                    {evt.title}
-                  </option>
-                ))}
+                {userEvents.map(evt => (<option key={evt._id || evt.id} value={evt._id || evt.id}>{evt.title}</option>))}
               </select>
             )}
+            {!eventData.isOverview && (
+              <>
+                <button onClick={() => setShowBroadcastModal(true)} title="Broadcast" className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-2 text-xs font-bold text-brand transition hover:opacity-80">
+                  <Megaphone size={14} /> <span className="hidden sm:inline">Broadcast</span>
+                </button>
+                <button onClick={() => { setEditForm(eventData); setIsEditing(true); }} title="Edit event" className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-2 text-xs font-bold eh-text-soft transition hover:text-brand">
+                  <Edit3 size={14} /> <span className="hidden sm:inline">Edit</span>
+                </button>
+                <button onClick={handleCopyLink} title="Copy event link" className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition ${isCopied ? 'bg-emerald-500 text-white' : 'bg-surface-2 eh-text-soft hover:text-brand'}`}>
+                  {isCopied ? <Check size={14} /> : <Copy size={14} />} <span className="hidden sm:inline">{isCopied ? 'Copied!' : 'Copy'}</span>
+                </button>
+              </>
+            )}
+            <button onClick={handleExportCSV} title="Export CSV" className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">
+              <Download size={14} /> <span className="hidden sm:inline">Export</span>
+            </button>
           </div>
-          <h1 className={`text-3xl md:text-4xl font-black mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>{eventData.title}</h1>
-          {eventData.date && !isNaN(new Date(eventData.date).getTime()) && <p className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-600'}`}>{new Date(eventData.date).toLocaleDateString()}</p>}
         </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3 w-full md:w-auto max-w-full">
-          {!eventData.isOverview && (
-            <>
-              <button
-                onClick={() => setShowBroadcastModal(true)}
-                className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-full transition-all font-bold text-xs bg-blue-600/10 text-blue-600 hover:bg-blue-600/20 dark:bg-blue-500/20 dark:text-blue-400 dark:hover:bg-blue-500/30`}
-                title="Broadcast"
-              >
-                <Megaphone size={14} /> <span className="hidden xs:inline sm:inline">Broadcast</span><span className="xs:hidden sm:hidden">Alert</span>
-              </button>
-              <button
-                onClick={() => { setEditForm(eventData); setIsEditing(true); }}
-                className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-full transition-all font-bold text-xs bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}
-                title="Edit Event"
-              >
-                <Edit3 size={14} /> <span>Edit</span>
-              </button>
-              <button
-                className={`flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-full transition-all font-bold text-xs min-w-0 ${isCopied ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : `bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 ${darkMode ? 'text-white' : 'text-slate-900'}`}`}
-                onClick={handleCopyLink}
-                title="Copy Event Link"
-              >
-                {isCopied ? <Check size={14} /> : <Copy size={14} />} <span>{isCopied ? 'Copied!' : 'Copy'}</span>
-              </button>
-            </>
-          )}
-          <button className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-all font-bold text-xs shadow-lg shadow-blue-600/30" onClick={handleExportCSV} title="Export CSV">
-            <Download size={14} /> <span>Export</span>
-          </button>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <Motion.div key={idx} whileHover={{ y: -6, scale: 1.02 }} className={`rounded-[1.5rem] p-6 border flex items-center gap-5 ${glassStyle}`}>
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${stat.bg} ${stat.color} shadow-inner`}>
-              <stat.icon size={24} strokeWidth={2.5} />
-            </div>
-            <div className={darkMode ? 'text-white' : 'text-slate-900'}>
-              <div className="text-2xl font-black leading-tight mb-1">{stat.value}</div>
-              <div className={`text-xs font-bold uppercase tracking-wider opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'}`}>{stat.title}</div>
-            </div>
-          </Motion.div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 gap-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className={`border rounded-[2rem] p-6 lg:col-span-2 ${glassStyle}`}>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className={`text-lg font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Sales Trend</h2>
-              <select 
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className={`text-xs font-bold rounded-xl px-3 py-2 border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
-              >
-                <option value="7">Last 7 Days</option>
-                <option value="30">Last 30 Days</option>
-                <option value="all">All Time</option>
+        {/* ---- Tabs ---- */}
+        <div className="flex w-fit gap-1 rounded-full bg-surface-2 p-1">
+          <button onClick={() => setActiveTab('analytics')} className={`rounded-full px-4 py-2 text-sm font-bold transition ${activeTab === 'analytics' ? 'bg-surface text-brand shadow-eh-sm' : 'eh-text-soft hover:text-brand'}`}>Analytics</button>
+          <button onClick={() => setActiveTab('events')} className={`rounded-full px-4 py-2 text-sm font-bold transition ${activeTab === 'events' ? 'bg-surface text-brand shadow-eh-sm' : 'eh-text-soft hover:text-brand'}`}>My events</button>
+        </div>
+
+        {activeTab === 'analytics' && (
+        <>
+        {/* ---- Stats bento ---- */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {stats.map((stat, idx) => (
+            <Motion.div key={idx} whileHover={{ y: -4 }} className="eh-surface rounded-3xl p-4 sm:p-5">
+              <span className={`grid h-11 w-11 place-items-center rounded-2xl ${stat.bg} ${stat.color}`}>
+                <stat.icon size={20} strokeWidth={2.5} />
+              </span>
+              <div className="eh-display mt-3 text-2xl font-extrabold leading-tight sm:mt-4 sm:text-3xl">{stat.value}</div>
+              <div className="mt-0.5 text-[11px] font-bold uppercase tracking-wider eh-text-muted">{stat.title}</div>
+            </Motion.div>
+          ))}
+        </div>
+
+        {/* ---- Charts ---- */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="eh-surface rounded-[2rem] p-5 sm:p-6 lg:col-span-2">
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <h2 className="eh-display text-lg font-bold">Sales trend</h2>
+              <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)} className="rounded-xl border border-line bg-surface px-3 py-1.5 text-xs font-bold eh-text focus:border-brand focus:outline-none">
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="all">All time</option>
               </select>
             </div>
-            <div className="h-64 w-full">
-              <Line data={lineData} options={lineOptions} />
-            </div>
+            <div className="h-56 w-full sm:h-64"><Line data={lineData} options={lineOptions} /></div>
           </div>
-          <div className={`border rounded-[2rem] p-6 ${glassStyle}`}>
-            <h2 className={`text-lg font-extrabold mb-6 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Tickets by Type</h2>
-            <div className="h-64 w-full">
-              <Doughnut data={doughnutData} options={doughnutOptions} />
-            </div>
+          <div className="eh-surface rounded-[2rem] p-5 sm:p-6">
+            <h2 className="eh-display mb-6 text-lg font-bold">Tickets by type</h2>
+            <div className="h-56 w-full sm:h-64"><Doughnut data={doughnutData} options={doughnutOptions} /></div>
           </div>
         </div>
-        <div className={`border rounded-[2rem] overflow-hidden ${glassStyle}`}>
-          <div className="p-6 border-b border-black/5 dark:border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className={`text-lg font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Recent Registrations</h2>
-            <div className="relative w-full sm:w-auto">
-              <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? 'text-white' : 'text-slate-500'}`} />
-              <input 
+
+        {/* ---- Attendees ---- */}
+        <div className="eh-surface overflow-hidden rounded-[2rem]">
+          <div className="flex flex-col gap-4 border-b border-line p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <h2 className="eh-display text-lg font-bold">Recent registrations</h2>
+            <div className="relative w-full sm:w-64">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+              <input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder="Search by name or email…"
                 value={attendeeSearch}
                 onChange={(e) => setAttendeeSearch(e.target.value)}
-                className={`w-full sm:w-64 text-sm font-bold rounded-xl pl-9 pr-3 py-2 border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+                className="w-full rounded-xl border border-line bg-surface py-2 pl-9 pr-3 text-sm font-semibold eh-text placeholder:text-ink-muted focus:border-brand focus:outline-none"
               />
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className={`w-full text-left ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-              <thead>
-                <tr className={`text-xs uppercase tracking-wider opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'} bg-black/5 dark:bg-white/5`}>
-                  <th className="px-6 py-4 font-extrabold">Attendee</th>
-                  <th className="px-6 py-4 font-extrabold">Ticket</th>
-                  <th className="px-6 py-4 font-extrabold">Status</th>
-                  <th className="px-6 py-4 font-extrabold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm font-medium">
-                {filteredAttendees.length === 0 ? (
-                   <tr>
-                     <td colSpan="3" className="text-center py-8 opacity-70">
-                       {attendeeSearch ? 'No attendees match your search.' : 'No attendees yet. Share your event link!'}
-                     </td>
-                   </tr>
-                ) : (
-                  currentAttendees.map((att, i) => (
-                    <tr 
-                  key={att?.user?._id || i} 
-                      ref={i === currentAttendees.length - 1 ? lastAttendeeElementRef : null}
-                      className="border-t border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                    <div className="font-bold text-base">{att?.user?.fullName || att?.fullName || 'Anonymous'}</div>
-                        <div className="opacity-70 text-xs">
-                      {att?.user?.email || att?.email || 'N/A'}
-                          {eventData.isOverview && <span className="block mt-0.5 text-blue-500 font-bold">{att.eventName}</span>}
-                        </div>
-                      </td>
-                  <td className="px-6 py-4">{att?.type || att?.ticketType || 'Standard'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
-                      att?.isVerified !== false ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                        }`}>
-                      {att?.isVerified !== false ? 'Paid' : 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 flex items-center justify-end gap-3">
-                    {att?.receiptUrl && (
-                      <a href={att?.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-700 font-bold hover:underline">
-                            View Receipt
-                          </a>
-                        )}
-                    {att?.isVerified === false && (
-                      <button onClick={() => handleApproveAttendee(att?.user?._id || att?.user?.id || att?.user, att?.eventId)} className="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline border border-emerald-500/30 px-3 py-1.5 rounded-full bg-emerald-500/10">
-                            Approve
-                          </button>
-                        )}
-                      </td>
+
+          {filteredAttendees.length === 0 ? (
+            <div className="p-10 text-center text-sm eh-text-muted">
+              {attendeeSearch ? 'No attendees match your search.' : 'No attendees yet. Share your event link to get started.'}
+            </div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-surface-2 text-xs uppercase tracking-wider eh-text-muted">
+                      <th className="px-6 py-4 font-bold">Attendee</th>
+                      <th className="px-6 py-4 font-bold">Ticket</th>
+                      <th className="px-6 py-4 font-bold">Status</th>
+                      <th className="px-6 py-4 text-right font-bold">Actions</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          
+                  </thead>
+                  <tbody className="text-sm">
+                    {currentAttendees.map((att, i) => (
+                      <tr key={att?.user?._id || i} className="border-t border-line transition-colors hover:bg-surface-2">
+                        <td className="px-6 py-4">
+                          <div className="font-bold eh-text">{att?.user?.fullName || att?.fullName || 'Anonymous'}</div>
+                          <div className="text-xs eh-text-muted">
+                            {att?.user?.email || att?.email || 'N/A'}
+                            {eventData.isOverview && <span className="mt-0.5 block font-bold eh-text-brand">{att.eventName}</span>}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 eh-text-soft">{att?.type || att?.ticketType || 'Standard'}</td>
+                        <td className="px-6 py-4"><StatusBadge verified={att?.isVerified} /></td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-3">
+                            {att?.receiptUrl && (
+                              <a href={att?.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold eh-text-brand hover:underline">View receipt</a>
+                            )}
+                            {att?.isVerified === false && (
+                              <button onClick={() => handleApproveAttendee(att?.user?._id || att?.user?.id || att?.user, att?.eventId)} className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 transition hover:bg-emerald-500/20 dark:text-emerald-400">Approve</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="divide-y divide-line md:hidden">
+                {currentAttendees.map((att, i) => (
+                  <div key={att?.user?._id || i} className="flex items-start justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-bold eh-text">{att?.user?.fullName || att?.fullName || 'Anonymous'}</p>
+                      <p className="truncate text-xs eh-text-muted">{att?.user?.email || att?.email || 'N/A'}</p>
+                      {eventData.isOverview && att.eventName && <p className="truncate text-xs font-bold eh-text-brand">{att.eventName}</p>}
+                      <p className="mt-1 text-[11px] font-semibold eh-text-soft">{att?.type || att?.ticketType || 'Standard'}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <StatusBadge verified={att?.isVerified} />
+                      {att?.receiptUrl && (
+                        <a href={att?.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold eh-text-brand hover:underline">Receipt</a>
+                      )}
+                      {att?.isVerified === false && (
+                        <button onClick={() => handleApproveAttendee(att?.user?._id || att?.user?.id || att?.user, att?.eventId)} className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 transition hover:bg-emerald-500/20 dark:text-emerald-400">Approve</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {visibleCount < filteredAttendees.length && (
-            <div className="p-6 text-center border-t border-black/5 dark:border-white/5">
-              <div className="inline-block w-6 h-6 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin"></div>
+            <div ref={lastAttendeeElementRef} className="border-t border-line p-6 text-center">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {activeTab === 'events' && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {userEvents.length === 0 ? (
+              <div className="eh-surface col-span-full rounded-[2rem] p-10 text-center">
+                <p className="text-sm eh-text-soft">You haven’t created any events yet.</p>
+                <Link to="/create-event" className="eh-btn eh-btn-primary mt-5">Create your first event</Link>
+              </div>
+            ) : (
+              userEvents.map((evt) => (
+                <div key={evt._id || evt.id} className="eh-surface overflow-hidden rounded-3xl">
+                  <div className="relative h-32 bg-brand">
+                    <img src={evt.coverImage || '/placeholder.png'} alt={evt.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover" onError={(e) => { e.target.src = '/placeholder.png'; }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                    {evt.status === 'draft' && <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">Draft</span>}
+                    <h3 className="eh-display absolute inset-x-3 bottom-3 truncate text-lg font-bold text-white">{evt.title}</h3>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between text-xs eh-text-muted">
+                      <span>{evt.date && !isNaN(new Date(evt.date).getTime()) ? new Date(evt.date).toLocaleDateString() : 'No date'}</span>
+                      <span>{evt.ticketsSold || 0} going</span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button onClick={() => { setEditForm(evt); setIsEditing(true); }} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-hover">
+                        <Edit3 size={14} /> Edit
+                      </button>
+                      <button onClick={() => { navigate(`/dashboard/${evt._id || evt.id}`); setActiveTab('analytics'); }} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-surface-2 px-3 py-2 text-xs font-bold eh-text-soft transition hover:text-brand">
+                        <TrendingUp size={14} /> Stats
+                      </button>
+                      <Link to={`/event-details/${evt._id || evt.id}`} className="inline-flex items-center justify-center rounded-xl bg-surface-2 px-3 py-2 text-xs font-bold eh-text-soft transition hover:text-brand">
+                        View
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Quick Edit Modal */}
       <AnimatePresence>
         {isEditing && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <Motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-lg p-6 rounded-[2rem] shadow-2xl border max-h-[90vh] overflow-y-auto ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+              className="eh-surface max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] p-6 shadow-eh-lg"
             >
-              <div className="flex justify-between items-center mb-6">
-                <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Quick Edit Event</h2>
-                <button onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="eh-display text-xl font-bold">Quick edit event</h2>
+                <button onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className="grid h-9 w-9 place-items-center rounded-full text-ink-muted transition hover:bg-surface-2">
                   <X size={20} />
                 </button>
               </div>
               <form onSubmit={handleEditSubmit} className="space-y-4 text-left">
-                <label className={`block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors relative overflow-hidden group ${darkMode ? 'border-slate-600 hover:border-blue-500 bg-slate-900/30' : 'border-slate-300 hover:border-blue-500 bg-slate-50'}`}>
+                <label className="group relative block cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-line bg-surface-2 p-6 text-center transition-colors hover:border-brand">
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                     const file = e.target.files[0];
                     if (file && file.size > 5 * 1024 * 1024) {
@@ -663,92 +746,113 @@ const EventDashboard = ({ darkMode }) => {
                     }
                     setEditingCoverImage(file);
                   }} />
-                  <img src={editingCoverImage ? URL.createObjectURL(editingCoverImage) : (editForm.coverImage || '/placeholder.png')} alt="Cover Preview" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="relative z-10 bg-black/40 backdrop-blur-sm p-2 rounded-lg inline-block">
-                    <ImageIcon size={24} className="text-white mx-auto mb-2" />
+                  <img src={editingCoverImage ? URL.createObjectURL(editingCoverImage) : (editForm.coverImage || '/placeholder.png')} alt="Cover preview" className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="relative z-10 inline-block rounded-lg bg-black/40 p-2 backdrop-blur-sm">
+                    <ImageIcon size={24} className="mx-auto mb-2 text-white" />
                     <p className="text-xs font-bold text-white">Click to change cover image</p>
                   </div>
                 </label>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Event Title</label>
-                  <input type="text" value={editForm.title || ''} onChange={e => setEditForm({...editForm, title: e.target.value})} className={inputStyle} required />
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Event title</label>
+                  <input type="text" value={editForm.title || ''} onChange={e => setEditForm({ ...editForm, title: e.target.value })} className={inputStyle} required />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Date</label>
-                    <input type="date" value={editForm.date ? editForm.date.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, date: e.target.value})} className={inputStyle} required />
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Start date</label>
+                    <input type="date" value={editForm.date ? editForm.date.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, date: e.target.value })} className={inputStyle} required />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Start Time</label>
-                    <input type="time" value={editForm.time || ''} onChange={e => setEditForm({...editForm, time: e.target.value})} className={inputStyle} />
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Start time</label>
+                    <input type="time" value={editForm.time || ''} onChange={e => setEditForm({ ...editForm, time: e.target.value })} className={inputStyle} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Date</label>
-                    <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({...editForm, endDate: e.target.value})} className={inputStyle} />
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">End date</label>
+                    <input type="date" value={editForm.endDate ? editForm.endDate.substring(0, 10) : ''} onChange={e => setEditForm({ ...editForm, endDate: e.target.value })} className={inputStyle} />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>End Time</label>
-                    <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({...editForm, endTime: e.target.value})} className={inputStyle} />
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">End time</label>
+                    <input type="time" value={editForm.endTime || ''} onChange={e => setEditForm({ ...editForm, endTime: e.target.value })} className={inputStyle} />
                   </div>
                 </div>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Location</label>
-                  <input type="text" value={typeof editForm.location === 'object' ? editForm.location?.formattedAddress : (editForm.location || '')} onChange={e => setEditForm({...editForm, location: e.target.value})} className={inputStyle} />
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Location</label>
+                  <input type="text" value={typeof editForm.location === 'object' ? editForm.location?.formattedAddress : (editForm.location || '')} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className={inputStyle} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Price (₦)</label>
-                    <input type="number" value={editForm.price || 0} onChange={e => setEditForm({...editForm, price: e.target.value})} className={inputStyle} />
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Price (₦)</label>
+                    <input type="number" value={editForm.price || 0} onChange={e => setEditForm({ ...editForm, price: e.target.value })} className={inputStyle} />
                   </div>
                   <div>
-                    <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Capacity</label>
-                    <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({...editForm, capacity: e.target.value})} className={inputStyle} placeholder="Unlimited" />
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Capacity</label>
+                    <input type="number" value={editForm.capacity || ''} onChange={e => setEditForm({ ...editForm, capacity: e.target.value })} className={inputStyle} placeholder="Unlimited" />
                   </div>
                 </div>
                 {Number(editForm.price) > 0 && (
-                  <div className={`mt-4 p-4 rounded-2xl border ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-200 bg-slate-50/60'}`}>
-                    <div className="flex items-center gap-2 mb-3">
+                  <div className="mt-4 rounded-2xl border border-line bg-surface-2 p-4">
+                    <div className="mb-3 flex items-center gap-2">
                       <Landmark size={16} className="text-emerald-500" />
-                      <h4 className={`text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-white' : 'text-slate-900'}`}>Payment Details</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-wider eh-text">Payment details</h4>
                     </div>
                     <div className="space-y-3">
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Bank Name</label>
-                        <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({...editForm, bankName: e.target.value})} className={inputStyle} placeholder="e.g., GTBank" />
+                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider eh-text-soft">Bank name</label>
+                        <input type="text" value={editForm.bankName || ''} onChange={e => setEditForm({ ...editForm, bankName: e.target.value })} className={inputStyle} placeholder="e.g. GTBank" />
                       </div>
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Number</label>
-                        <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({...editForm, accountNumber: e.target.value})} className={inputStyle} placeholder="e.g., 0123456789" />
+                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider eh-text-soft">Account number</label>
+                        <input type="text" value={editForm.accountNumber || ''} onChange={e => setEditForm({ ...editForm, accountNumber: e.target.value })} className={inputStyle} placeholder="e.g. 0123456789" />
                       </div>
                       <div>
-                        <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>Account Name</label>
-                        <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({...editForm, accountName: e.target.value})} className={inputStyle} placeholder="e.g., John Doe" />
+                        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider eh-text-soft">Account name</label>
+                        <input type="text" value={editForm.accountName || ''} onChange={e => setEditForm({ ...editForm, accountName: e.target.value })} className={inputStyle} placeholder="e.g. John Doe" />
                       </div>
                     </div>
                   </div>
                 )}
-                <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
-                    Cancel
-                  </button>
-                  <button type="button" onClick={handleDelete} disabled={isSaving || (!hasHappened && editForm?.status !== 'draft')} title={(!hasHappened && editForm?.status !== 'draft') ? "Published events can only be deleted after they have happened" : "Delete Event"} className={`px-6 py-3.5 rounded-2xl font-bold transition-colors bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}>
-                    Delete
-                  </button>
-                  {editForm?.status === 'draft' && (
-                    <button 
-                      type="button" 
-                      disabled={isSaving} 
-                      onClick={(e) => { editForm.status = 'published'; handleEditSubmit(e); }} 
-                      className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 disabled:opacity-50"
-                    >
-                      Publish
-                    </button>
+
+                <div className="rounded-2xl border border-line bg-surface-2 p-4">
+                  <div className="mb-1 flex items-center gap-2">
+                    <Ticket size={16} className="text-brand" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider eh-text">Ticket tiers</h4>
+                  </div>
+                  <p className="mb-4 text-xs eh-text-muted">Optional. Levels like VIP or VVIP, each with its own price and colour.</p>
+
+                  {(editForm.ticketTiers || []).length > 0 && (
+                    <div className="space-y-3">
+                      {(editForm.ticketTiers || []).map((tier, idx) => (
+                        <div key={idx} className="rounded-xl border border-line bg-surface p-3">
+                          <div className="mb-2 flex items-center gap-2">
+                            {TIER_COLORS.map((c) => (
+                              <button key={c} type="button" aria-label={`Set tier colour ${c}`} onClick={() => updateEditTier(idx, 'color', c)} style={{ background: c }} className={`h-5 w-5 rounded-full transition ${tier.color === c ? 'ring-2 ring-[var(--eh-text)] ring-offset-2 ring-offset-[var(--eh-surface)]' : 'opacity-60 hover:opacity-100'}`} />
+                            ))}
+                            <button type="button" onClick={() => removeEditTier(idx)} aria-label="Remove tier" className="ml-auto grid h-7 w-7 place-items-center rounded-full text-ink-muted transition hover:bg-red-500/10 hover:text-red-500"><Trash2 size={14} /></button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <input value={tier.name || ''} onChange={(e) => updateEditTier(idx, 'name', e.target.value)} placeholder="Name (e.g. VIP)" className={inputStyle} />
+                            <input type="number" value={tier.price ?? 0} onChange={(e) => updateEditTier(idx, 'price', e.target.value)} placeholder="Price (₦)" className={inputStyle} />
+                            <input type="number" value={tier.capacity || ''} onChange={(e) => updateEditTier(idx, 'capacity', e.target.value)} placeholder="Capacity" className={inputStyle} />
+                          </div>
+                          <input value={tier.perks || ''} onChange={(e) => updateEditTier(idx, 'perks', e.target.value)} placeholder="Perks (optional)" className={`${inputStyle} mt-2`} />
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  <button type="submit" disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50">
-                    {isSaving ? 'Saving...' : 'Save'}
+
+                  <button type="button" onClick={addEditTier} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-dashed border-line bg-surface px-3 py-2 text-xs font-semibold eh-text-soft transition hover:border-brand hover:text-brand">
+                    <Plus size={14} /> Add tier
                   </button>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => { setIsEditing(false); setEditingCoverImage(null); }} className="eh-btn eh-btn-ghost flex-1">Cancel</button>
+                  <button type="button" onClick={handleDelete} disabled={isSaving || (!hasHappened && editForm?.status !== 'draft')} title={(!hasHappened && editForm?.status !== 'draft') ? "Published events can only be deleted after they have happened" : "Delete event"} className="rounded-2xl bg-red-500/10 px-5 font-semibold text-red-600 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400">Delete</button>
+                  {editForm?.status === 'draft' && (
+                    <button type="button" disabled={isSaving} onClick={(e) => { editForm.status = 'published'; handleEditSubmit(e); }} className="flex-1 rounded-2xl bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50">Publish</button>
+                  )}
+                  <button type="submit" disabled={isSaving} className="eh-btn eh-btn-primary flex-1 disabled:opacity-50">{isSaving ? 'Saving…' : 'Save'}</button>
                 </div>
               </form>
             </Motion.div>
@@ -759,29 +863,25 @@ const EventDashboard = ({ darkMode }) => {
       {/* Delete Event Confirmation Modal */}
       <AnimatePresence>
         {showEventDeleteConfirm && (
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <Motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-md p-6 rounded-[2rem] shadow-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+              className="eh-surface w-full max-w-md rounded-[2rem] p-6 shadow-eh-lg"
             >
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 flex-shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
+              <div className="mb-4 flex items-center gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-red-500/10 text-red-500">
                   <AlertTriangle size={24} />
                 </div>
                 <div>
-                  <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Delete Event</h2>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Are you sure? This action is permanent.</p>
+                  <h2 className="eh-display text-xl font-bold">Delete event</h2>
+                  <p className="mt-1 text-sm eh-text-soft">Are you sure? This action is permanent.</p>
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowEventDeleteConfirm(false)} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>
-                  Cancel
-                </button>
-                <button onClick={confirmDelete} disabled={isSaving} className="flex-1 py-3.5 rounded-2xl font-bold transition-colors bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 disabled:opacity-50">
-                  {isSaving ? 'Deleting...' : 'Confirm Delete'}
-                </button>
+              <div className="mt-6 flex gap-3">
+                <button onClick={() => setShowEventDeleteConfirm(false)} className="eh-btn eh-btn-ghost flex-1">Cancel</button>
+                <button onClick={confirmDelete} disabled={isSaving} className="flex-1 rounded-2xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700 disabled:opacity-50">{isSaving ? 'Deleting…' : 'Confirm delete'}</button>
               </div>
             </Motion.div>
           </div>
@@ -791,34 +891,32 @@ const EventDashboard = ({ darkMode }) => {
       {/* Broadcast Modal */}
       <AnimatePresence>
         {showBroadcastModal && (
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
             <Motion.div
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-lg p-6 rounded-[2rem] shadow-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}
+              className="eh-surface w-full max-w-lg rounded-[2rem] p-6 shadow-eh-lg"
             >
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3 text-blue-600 dark:text-blue-400">
-                  <Megaphone size={24} />
-                  <h2 className={`text-xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>Broadcast Announcement</h2>
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-3 text-brand">
+                  <Megaphone size={22} />
+                  <h2 className="eh-display text-xl font-bold">Broadcast announcement</h2>
                 </div>
-                <button onClick={() => setShowBroadcastModal(false)} className={`p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <button onClick={() => setShowBroadcastModal(false)} className="grid h-9 w-9 place-items-center rounded-full text-ink-muted transition hover:bg-surface-2">
                   <X size={20} />
                 </button>
               </div>
               <form onSubmit={handleBroadcastSubmit} className="space-y-4 text-left">
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Subject (Optional)</label>
-                  <input type="text" placeholder="e.g. Venue Change!" value={broadcastForm.title} onChange={e => setBroadcastForm({...broadcastForm, title: e.target.value})} className={inputStyle} />
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Subject (optional)</label>
+                  <input type="text" placeholder="e.g. Venue change!" value={broadcastForm.title} onChange={e => setBroadcastForm({ ...broadcastForm, title: e.target.value })} className={inputStyle} />
                 </div>
                 <div>
-                  <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Message <span className="text-red-500">*</span></label>
-                  <textarea rows="4" required placeholder="Type your announcement here..." value={broadcastForm.message} onChange={e => setBroadcastForm({...broadcastForm, message: e.target.value})} className={inputStyle}></textarea>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider eh-text-soft">Message <span className="text-red-500">*</span></label>
+                  <textarea rows="4" required placeholder="Type your announcement here…" value={broadcastForm.message} onChange={e => setBroadcastForm({ ...broadcastForm, message: e.target.value })} className={`${inputStyle} resize-none`} />
                 </div>
-                <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => setShowBroadcastModal(false)} className={`flex-1 py-3.5 rounded-2xl font-bold transition-colors border ${darkMode ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-900 hover:bg-slate-100'}`}>Cancel</button>
-                  <button type="submit" disabled={isBroadcasting || !broadcastForm.message.trim()} className="flex-[2] py-3.5 rounded-2xl font-bold transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:shadow-none">
-                    {isBroadcasting ? 'Broadcasting...' : 'Send to Attendees'}
-                  </button>
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setShowBroadcastModal(false)} className="eh-btn eh-btn-ghost flex-1">Cancel</button>
+                  <button type="submit" disabled={isBroadcasting || !broadcastForm.message.trim()} className="eh-btn eh-btn-primary flex-[2] disabled:opacity-50">{isBroadcasting ? 'Broadcasting…' : 'Send to attendees'}</button>
                 </div>
               </form>
             </Motion.div>

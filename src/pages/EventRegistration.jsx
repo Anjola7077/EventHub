@@ -148,9 +148,13 @@ const EventRegistration = ({ darkMode }) => {
                           className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedTier?.name === tier.name ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : darkMode ? 'border-slate-700 bg-slate-800 hover:border-slate-500' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}
                         >
                           <div className="flex justify-between items-center mb-1">
-                            <span className={`font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{tier.name}</span>
+                            <span className={`flex items-center gap-2 font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: tier.color || '#2563eb' }} />
+                              {tier.name}
+                            </span>
                             <span className="text-blue-600 font-bold">{tier.price === 0 ? 'Free' : `₦${tier.price.toLocaleString()}`}</span>
                           </div>
+                          {tier.perks && <div className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">{tier.perks}</div>}
                           {tier.capacity && <div className="text-xs text-slate-500 dark:text-slate-400">{tier.capacity} Tickets Total</div>}
                         </div>
                       ))

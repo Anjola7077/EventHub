@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Calendar, Lock, ArrowRight, Heart, Navigation, X } from 'lucide-react';
+import { Search, MapPin, Calendar, ArrowRight, Heart, Navigation, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
+import { EVENT_FILTER_CATEGORIES } from '../constants/categories';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -28,7 +29,7 @@ const createClusterCustomIcon = (cluster) => {
   let size = 40;
   if (count >= 10) size = 48;
   if (count >= 50) size = 56;
-  
+
   return L.divIcon({
     className: 'bg-transparent border-none',
     html: `<div class="flex items-center justify-center rounded-full bg-blue-600 text-white font-bold border-4 border-blue-200/50 shadow-lg shadow-blue-600/40 hover:bg-blue-700 transition-colors" style="width: ${size}px; height: ${size}px;">
@@ -48,7 +49,7 @@ const LiveEventStatus = ({ event }) => {
       let startStr = event.date || new Date().toISOString();
       if (startStr.includes('T')) startStr = startStr.split('T')[0];
       const start = new Date(`${startStr}T${event.time || '00:00'}`).getTime();
-      
+
       let endStr = event.endDate || startStr;
       if (endStr.includes('T')) endStr = endStr.split('T')[0];
       const end = new Date(`${endStr}T${event.endTime || '23:59'}`).getTime();
@@ -59,11 +60,11 @@ const LiveEventStatus = ({ event }) => {
         const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const secs = Math.floor((diff % (1000 * 60)) / 1000);
-        
+
         if (days > 0) setStatus({ text: `Starts in ${days}d ${hours}h`, type: 'upcoming' });
         else if (hours > 0) setStatus({ text: `Starts in ${hours}h ${mins}m`, type: 'upcoming' });
         else setStatus({ text: `Starts in ${mins}m ${secs}s`, type: 'urgent' });
-        
+
         // 15 Minute Warning System Notification
         const fifteenKey = `notif_15m_${event._id || event.id}`;
         if (diff <= 15 * 60 * 1000 && diff > 0 && !localStorage.getItem(fifteenKey)) {
@@ -74,7 +75,7 @@ const LiveEventStatus = ({ event }) => {
         }
       } else if (now >= start && now <= end) {
         setStatus({ text: 'LIVE 🔴', type: 'ongoing' });
-        
+
         // Live System Notification
         const liveKey = `notif_live_${event._id || event.id}`;
         if (!localStorage.getItem(liveKey)) {
@@ -87,7 +88,7 @@ const LiveEventStatus = ({ event }) => {
         setStatus({ text: 'ENDED', type: 'ended' });
       }
     };
-    
+
     updateStatus();
     const interval = setInterval(updateStatus, 1000);
     return () => clearInterval(interval);
@@ -95,17 +96,16 @@ const LiveEventStatus = ({ event }) => {
 
   if (!status.text) return null;
 
-  const baseClasses = "absolute bottom-4 right-4 px-3 py-1.5 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
-  
+  const baseClasses = "absolute bottom-2 right-2 sm:bottom-3 sm:right-3 px-2 py-1 sm:px-3 sm:py-1.5 backdrop-blur-md rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border shadow-lg z-10 flex items-center gap-1.5 transition-colors";
+
   if (status.type === 'ended') return <div className={`${baseClasses} bg-slate-500/90 text-white border-slate-400`}>{status.text}</div>;
   if (status.type === 'ongoing') return <div className={`${baseClasses} bg-red-500/90 text-white border-red-400 animate-pulse`}>{status.text}</div>;
   if (status.type === 'urgent') return <div className={`${baseClasses} bg-amber-500/90 text-white border-amber-400`}>{status.text}</div>;
   return <div className={`${baseClasses} bg-emerald-500/90 text-white border-emerald-400`}>{status.text}</div>;
 };
 
-const Events = ({ darkMode }) => {
+const Events = () => {
   const { user } = useContext(AuthContext);
-  const isAuthenticated = !!user;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCity, setSearchCity] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -114,21 +114,17 @@ const Events = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [mapCenter, setMapCenter] = useState([6.5244, 3.3792]);
-  
+
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const categories = ['All', 'Technology', 'Music', 'Business', 'Networking', 'Startups', 'Education', 'Design'];
-  
-  const glassStyle = darkMode 
-    ? 'bg-slate-800/40 border-slate-700/50 backdrop-blur-2xl shadow-xl' 
-    : 'bg-white/60 border-white/50 backdrop-blur-2xl shadow-[0_8px_32px_rgba(10,31,110,0.08)]';
+  const categories = EVENT_FILTER_CATEGORIES;
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -136,7 +132,7 @@ const Events = ({ darkMode }) => {
   const lastEventElementRef = useCallback(node => {
     if (loading) return;
     if (observer.current) observer.current.disconnect();
-    
+
     observer.current = new IntersectionObserver(entries => {
       // Only paginate if we're not doing a heavy geo-search right now
       if (entries[0].isIntersecting && hasMore && !searchCity) {
@@ -189,7 +185,7 @@ const Events = ({ darkMode }) => {
         setEvents(res.data?.data || []);
         setHasMore(false); // Disable infinite scroll during map mode
       } else { alert("City not found."); }
-    } catch (err) { console.error("Map search failed", err); } 
+    } catch (err) { console.error("Map search failed", err); }
     finally { setIsSearchingLocation(false); }
   };
 
@@ -219,7 +215,7 @@ const Events = ({ darkMode }) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) return; // Optional: Add a login prompt here
-    
+
     const currentUserId = String(user._id || user.id);
     // Optimistic UI Update
     setEvents(prev => prev.map(ev => {
@@ -240,232 +236,239 @@ const Events = ({ darkMode }) => {
     }
   };
 
-  const filteredEvents = events.filter(ev => 
+  const filteredEvents = events.filter(ev =>
     ev.title.toLowerCase().includes(debouncedQuery.toLowerCase())
   );
 
+  const isLiked = (event) =>
+    Array.isArray(event.likes) && event.likes.some(id => String(id?._id || id) === String(user?._id || user?.id));
+
   return (
-    <Motion.main 
+    <Motion.main
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="pt-28 pb-20 px-4 md:px-8 max-w-7xl mx-auto"
+      className="eh-page-bg min-h-screen pt-28 pb-24"
     >
-      <div className="text-center mb-12">
-        <h1 className={`text-4xl md:text-5xl font-black mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Discover Events</h1>
-        <p className={`text-sm font-semibold opacity-100 max-w-xl mx-auto ${darkMode ? 'text-white' : 'text-slate-600'}`}>Find your next experience and connect with like-minded people.</p>
+      <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+        {/* ---- Header ---- */}
+        <header className="mb-9 max-w-2xl text-left">
+          <p className="eh-eyebrow flex items-center gap-2">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" />
+            Discover
+          </p>
+          <h1 className="eh-display mt-4 text-[clamp(2.2rem,6vw,3.6rem)] font-extrabold leading-[1]">
+            What’s on <span className="eh-text-accent">near you</span>
+          </h1>
+          <p className="mt-4 max-w-[52ch] text-lg eh-text-soft">
+            Find your next experience and meet people who are into the same things.
+          </p>
+        </header>
 
-      </div>
-
-      <form onSubmit={handleCitySearch} className="mb-8 flex gap-3 max-w-2xl mx-auto">
-        <div className="relative flex-1 group">
-          <input type="text" value={searchCity} onChange={(e) => setSearchCity(e.target.value)} placeholder="Search by city (e.g., London, New York)" className={`w-full px-5 py-3.5 pl-12 rounded-2xl border transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20 ${darkMode ? 'bg-slate-900/50 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'}`} />
-          <button type="button" onClick={handleGPSLocation} title="Use my current location" className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 rounded-lg transition-colors z-10">
-            <Navigation size={18} className={isSearchingLocation ? "animate-pulse text-blue-400" : ""} />
-          </button>
-        </div>
-        <button type="submit" disabled={isSearchingLocation} className="px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition disabled:opacity-50 shadow-lg shadow-blue-600/30">
-          {isSearchingLocation ? '...' : 'Search Map'}
-        </button>
-        {searchCity && <button type="button" onClick={() => { setSearchCity(''); setPage(1); }} className={`px-4 py-3.5 rounded-2xl font-bold transition border ${darkMode ? 'border-slate-700 text-white hover:bg-slate-800' : 'border-slate-200 text-slate-700 hover:bg-slate-100'}`}><X size={18} /></button>}
-      </form>
- 
-      <div className={`sticky top-24 z-20 max-w-4xl mx-auto p-2 rounded-full border mb-10 flex flex-col md:flex-row gap-2 ${glassStyle}`}>
-        <div className="relative flex-1 group">
-          <Search size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${darkMode ? 'text-slate-400 group-focus-within:text-blue-400' : 'text-slate-400 group-focus-within:text-blue-600'}`} />
-          <input 
-            type="text" 
-            placeholder="Search events, meetups..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full bg-transparent border-none focus:outline-none pl-12 pr-5 py-3.5 text-sm font-bold transition-all rounded-full focus:ring-2 focus:ring-blue-500/20 ${darkMode ? 'text-white placeholder-slate-500' : 'text-slate-900 placeholder-slate-400'}`}
-          />
-        </div>
-        <div className="w-px bg-black/10 dark:bg-white/10 hidden md:block my-2" />
-        <div className="flex overflow-x-auto no-scrollbar px-2 items-center gap-2">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => handleCategoryChange(cat)}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                activeCategory === cat 
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' 
-                  : `bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 opacity-100 hover:opacity-100 ${darkMode ? 'text-white' : 'text-slate-700'}`
-              }`}
-            >
-              {cat}
+        {/* ---- City / map search ---- */}
+        <form onSubmit={handleCitySearch} className="mb-5 flex flex-wrap gap-3">
+          <div className="relative min-w-[240px] flex-1">
+            <button type="button" onClick={handleGPSLocation} title="Use my current location" aria-label="Use my current location" className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-lg p-1.5 text-brand transition-colors hover:bg-surface-2">
+              <Navigation size={18} className={isSearchingLocation ? "animate-pulse" : ""} />
             </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="relative">
-        {/* Interactive Map View */}
-        <div className={`h-80 w-full rounded-[2.5rem] overflow-hidden border shadow-xl mb-12 z-0 relative ${darkMode ? 'border-slate-700 bg-slate-900 [&_.leaflet-container]:invert [&_.leaflet-container]:hue-rotate-180 [&_.leaflet-container]:brightness-90' : 'border-slate-200 bg-white'}`}>
-          <MapContainer key={events.length + '-' + mapCenter.join(',')} center={mapCenter} zoom={12} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 1 }}>
-            <TileLayer attribution={`&copy; <a href="https://www.openstreetmap.org/copyright" ${darkMode ? 'style="color: #94a3b8;"' : ''}>OpenStreetMap</a> contributors`} url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <MarkerClusterGroup 
-              chunkedLoading
-              zoomToBoundsOnClick={false}
-              iconCreateFunction={createClusterCustomIcon}
-              polygonOptions={{
-                fillColor: '#2563eb',
-                color: '#2563eb',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.2
-              }}
-              eventHandlers={{
-                clusterclick: (e) => {
-                  const cluster = e.layer;
-                  const map = cluster._map || e.target._map;
-                  if (map) {
-                    map.flyToBounds(cluster.getBounds(), { padding: [50, 50], duration: 1.5, easeLinearity: 0.25 });
-                  }
-                }
-              }}
-            >
-            {events.map((event) => {
-              if (event.location?.type === 'Point' && event.location.coordinates?.length === 2) {
-                const lat = event.location.coordinates[1];
-                const lng = event.location.coordinates[0];
-                return (
-                  <Marker key={event._id || event.id} position={[lat, lng]} icon={createCustomIcon(event.coverImage)}>
-                    <Popup className={`rounded-xl shadow-lg ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-                      <div className="p-2 min-w-[150px]">
-                        <img src={event.coverImage || '/placeholder.png'} alt={event.title} className="w-full h-20 object-cover rounded-lg mb-2" />
-                        <p className="font-bold text-[13px] leading-tight mb-1 truncate">{event.title}</p>
-                        <p className={`text-[10px] mb-3 ${darkMode ? 'text-white' : 'text-slate-500'}`}>{new Date(event.date).toLocaleDateString()}</p>
-                        <Link to={`/event-details/${event._id || event.id}`} className="block w-full text-center bg-blue-600 hover:bg-blue-700 !text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors shadow-sm" style={{ color: '#ffffff' }}>View Event</Link>
-                      </div>
-                    </Popup>
-                  </Marker>
-                );
-              }
-              return null;
-            })}
-            </MarkerClusterGroup>
-          </MapContainer>
-        </div>
-
-        {!isAuthenticated && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/30 dark:bg-slate-900/30 backdrop-blur-md rounded-[2.5rem]">
-            <Motion.div 
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              className={`p-8 rounded-[2rem] border text-center max-w-sm w-full mx-4 shadow-2xl ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-blue-50'}`}
-            >
-              <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Lock size={28} />
-              </div>
-              <h3 className={`text-xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Unlock Experiences</h3>
-              <p className={`text-sm font-medium opacity-100 mb-8 ${darkMode ? 'text-white' : 'text-slate-600'}`}>Sign in to discover personalized events and reserve your tickets.</p>
-              <Link to="/login" className="block w-full">
-                <button className="w-full py-4 rounded-2xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 transition-colors">
-                  Sign In to Continue
-                </button>
-               </Link>
-            </Motion.div>
+            <input
+              type="text"
+              value={searchCity}
+              onChange={(e) => setSearchCity(e.target.value)}
+              placeholder="Search by city (e.g. London, Lagos)"
+              className="w-full rounded-2xl border border-line bg-surface px-5 py-3.5 pl-12 text-sm eh-text placeholder:text-ink-muted transition focus:border-brand focus:outline-none focus:[box-shadow:var(--eh-ring)]"
+            />
           </div>
-        )}
+          <button type="submit" disabled={isSearchingLocation} className="eh-btn eh-btn-primary disabled:opacity-50">
+            {isSearchingLocation ? 'Searching…' : 'Search map'}
+          </button>
+          {searchCity && (
+            <button type="button" onClick={() => { setSearchCity(''); setPage(1); }} aria-label="Clear" className="eh-btn eh-btn-ghost px-4">
+              <X size={18} />
+            </button>
+          )}
+        </form>
 
-        {loading && events.length === 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className={`rounded-[2rem] border overflow-hidden h-[360px] animate-pulse ${darkMode ? 'bg-slate-800/40 border-slate-700/50' : 'bg-slate-50 border-slate-200'}`}>
-                <div className={`h-48 ${darkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} />
-                <div className="p-6 space-y-4">
-                  <div className={`h-6 rounded-md w-3/4 ${darkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} />
-                  <div className={`h-4 rounded-md w-1/2 ${darkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} />
-                  <div className={`h-4 rounded-md w-full ${darkMode ? 'bg-slate-700/50' : 'bg-slate-200'}`} />
-                </div>
-              </div>
+        {/* ---- Sticky search + categories ---- */}
+        <div className="eh-surface sticky top-24 z-20 mb-10 flex flex-col gap-2 rounded-3xl p-2 shadow-eh-sm md:flex-row md:items-center md:rounded-full">
+          <div className="group relative flex-1">
+            <Search size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-ink-muted transition-colors group-focus-within:text-brand" />
+            <input
+              type="text"
+              placeholder="Search events, meetups…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-full border-none bg-transparent py-3 pl-12 pr-5 text-sm font-semibold eh-text placeholder:text-ink-muted focus:outline-none"
+            />
+          </div>
+          <div className="my-1 hidden w-px self-stretch bg-line md:block" />
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-1 pb-1 md:pb-0">
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => handleCategoryChange(cat)}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition-all ${
+                  activeCategory === cat
+                    ? 'bg-brand text-white shadow-eh-sm'
+                    : 'bg-surface-2 text-ink-soft hover:text-brand'
+                }`}
+              >
+                {cat}
+              </button>
             ))}
           </div>
-        ) : events.length === 0 && !loading ? (
-          <Motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`py-16 px-6 text-center rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center ${darkMode ? 'border-slate-700 bg-slate-800/20' : 'border-slate-200 bg-slate-50'}`}
-          >
-            <div className={`w-20 h-20 mb-6 rounded-full flex items-center justify-center ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-white shadow-sm text-slate-400'}`}>
-              <Search size={32} />
-            </div>
-            <h3 className={`text-xl font-black mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>No events found</h3>
-            <p className={`text-sm font-medium max-w-sm mb-8 ${darkMode ? 'text-white' : 'text-slate-500'}`}>
-              {searchQuery 
-                ? `We couldn't find any events matching "${searchQuery}". Try adjusting your filters or search terms.` 
-                : `We couldn't find any events in this category. Try adjusting your filters.`}
-            </p>
-            <button 
-              onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}
-              className="px-8 py-3.5 rounded-2xl text-sm font-bold bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700 hover:-translate-y-0.5 transition-all"
-            >
-              Clear Search
-            </button>
-          </Motion.div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <AnimatePresence>
-              {filteredEvents.map((event, i) => (
-                <Motion.div
-                  ref={filteredEvents.length === i + 1 ? lastEventElementRef : null}
-                  key={event._id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                  className={`group flex flex-col rounded-[2rem] border overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl ${glassStyle}`}
-                >
-                  <div className="h-48 bg-blue-500 relative overflow-hidden">
-                    <img
-                      src={event.coverImage || '/placeholder.png'}
-                      alt={event.title}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      onError={(e) => { e.target.src = '/placeholder.png'; }}
-                    />
-                    <div className="absolute inset-0 bg-black/25" />
-                    <div className="absolute top-4 left-4 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider text-white border border-white/20">
-                      {event.category || 'General'}
-                    </div>
-                    <button 
-                      onClick={(e) => handleLikeEvent(e, event._id || event.id)} 
-                    className={`absolute top-4 right-4 p-2.5 backdrop-blur-md rounded-full border transition-colors z-10 ${Array.isArray(event.likes) && event.likes.some(id => String(id?._id || id) === String(user?._id || user?.id)) ? 'bg-red-500 border-red-500 text-white' : 'bg-white/20 border-white/20 text-white hover:bg-red-500 hover:border-red-500'}`}
-                    >
-                    <Heart size={16} className={Array.isArray(event.likes) && event.likes.some(id => String(id?._id || id) === String(user?._id || user?.id)) ? 'fill-current' : ''} />
-                    </button>
-                    <LiveEventStatus event={event} />
+        </div>
+
+        <div className="relative">
+          {/* Interactive Map View */}
+          <div className="relative z-0 mb-12 h-80 w-full overflow-hidden rounded-[2rem] border border-line bg-surface shadow-eh-lg dark:[&_.leaflet-container]:invert dark:[&_.leaflet-container]:hue-rotate-180 dark:[&_.leaflet-container]:brightness-90">
+            <MapContainer key={events.length + '-' + mapCenter.join(',')} center={mapCenter} zoom={12} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+              <TileLayer attribution={`&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors`} url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <MarkerClusterGroup
+                chunkedLoading
+                zoomToBoundsOnClick={false}
+                iconCreateFunction={createClusterCustomIcon}
+                polygonOptions={{
+                  fillColor: '#2563eb',
+                  color: '#2563eb',
+                  weight: 2,
+                  opacity: 1,
+                  fillOpacity: 0.2
+                }}
+                eventHandlers={{
+                  clusterclick: (e) => {
+                    const cluster = e.layer;
+                    const map = cluster._map || e.target._map;
+                    if (map) {
+                      map.flyToBounds(cluster.getBounds(), { padding: [50, 50], duration: 1.5, easeLinearity: 0.25 });
+                    }
+                  }
+                }}
+              >
+                {events.map((event) => {
+                  if (event.location?.type === 'Point' && event.location.coordinates?.length === 2) {
+                    const lat = event.location.coordinates[1];
+                    const lng = event.location.coordinates[0];
+                    return (
+                      <Marker key={event._id || event.id} position={[lat, lng]} icon={createCustomIcon(event.coverImage)}>
+                        <Popup>
+                          <div className="min-w-[150px] p-1">
+                            <img src={event.coverImage || '/placeholder.png'} alt={event.title} className="mb-2 h-20 w-full rounded-lg object-cover" />
+                            <p className="mb-1 truncate text-[13px] font-bold leading-tight">{event.title}</p>
+                            <p className="mb-3 text-[10px] text-slate-500">{new Date(event.date).toLocaleDateString()}</p>
+                            <Link to={`/event-details/${event._id || event.id}`} className="block w-full rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-bold !text-white transition-colors hover:bg-blue-700" style={{ color: '#ffffff' }}>View event</Link>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  }
+                  return null;
+                })}
+              </MarkerClusterGroup>
+            </MapContainer>
+          </div>
+
+          {loading && events.length === 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="animate-pulse overflow-hidden rounded-2xl border border-line bg-surface-2 sm:rounded-[1.75rem]">
+                  <div className="aspect-[4/3] bg-line" />
+                  <div className="space-y-3 p-3 sm:p-5">
+                    <div className="h-4 w-3/4 rounded-md bg-line sm:h-5" />
+                    <div className="h-3 w-1/2 rounded-md bg-line" />
+                    <div className="h-3 w-full rounded-md bg-line" />
                   </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className={`text-lg font-black leading-tight mb-3 group-hover:text-blue-500 transition-colors line-clamp-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {event.title}
-                    </h3>
-                    <div className="space-y-2 mt-auto">
-                      <div className={`flex items-center gap-2 text-xs font-bold opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                        <Calendar size={14} className="text-blue-500" />
-                        {new Date(event.date).toLocaleDateString()}
+                </div>
+              ))}
+            </div>
+          ) : events.length === 0 && !loading ? (
+            <Motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-line bg-surface-2 px-6 py-16 text-center"
+            >
+              <div className="mb-6 grid h-20 w-20 place-items-center rounded-full bg-surface text-ink-muted shadow-eh-sm">
+                <Search size={30} />
+              </div>
+              <h3 className="eh-display text-xl font-bold">No events found</h3>
+              <p className="mb-8 mt-2 max-w-sm text-sm eh-text-soft">
+                {searchQuery
+                  ? `Nothing matches “${searchQuery}”. Try a different search or filter.`
+                  : `No events in this category yet. Try adjusting your filters.`}
+              </p>
+              <button
+                onClick={() => { setSearchQuery(''); setActiveCategory('All'); }}
+                className="eh-btn eh-btn-primary"
+              >
+                Clear search
+              </button>
+            </Motion.div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <AnimatePresence>
+                {filteredEvents.map((event, i) => (
+                  <Motion.div
+                    ref={filteredEvents.length === i + 1 ? lastEventElementRef : null}
+                    key={event._id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    className="eh-surface group flex flex-col overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-eh-lg sm:rounded-[1.75rem]"
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden bg-brand">
+                      <img
+                        src={event.coverImage || '/placeholder.png'}
+                        alt={event.title}
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => { e.target.src = '/placeholder.png'; }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                      <div className="absolute left-2 top-2 rounded-full border border-white/20 bg-black/30 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur-md sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-[10px]">
+                        {event.category || 'General'}
                       </div>
-                      <div className={`flex items-center gap-2 text-xs font-bold opacity-100 ${darkMode ? 'text-white' : 'text-slate-600'}`}>
-                        <MapPin size={14} className="text-blue-500" />
-                        <span className="truncate">{event.location?.formattedAddress || 'Location TBA'}</span>
-                      </div>
+                      <button
+                        onClick={(e) => handleLikeEvent(e, event._id || event.id)}
+                        aria-label="Save event"
+                        className={`absolute right-2 top-2 z-10 grid h-9 w-9 place-items-center rounded-full border backdrop-blur-md transition-colors sm:right-3 sm:top-3 ${isLiked(event) ? 'border-red-500 bg-red-500 text-white' : 'border-white/20 bg-black/30 text-white hover:border-red-500 hover:bg-red-500'}`}
+                      >
+                        <Heart size={15} className={isLiked(event) ? 'fill-current' : ''} />
+                      </button>
+                      <LiveEventStatus event={event} />
                     </div>
-                    <div className="mt-6 pt-5 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
-                      <div className="flex -space-x-2">
-                        <div className={`text-sm font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {event.price === 0 ? 'FREE' : `₦${event.price.toLocaleString()}`}
+                    <div className="flex flex-1 flex-col p-3 sm:p-5">
+                      <Link to={`/event-details/${event._id}`} className="mb-2 sm:mb-3">
+                        <h3 className="eh-display line-clamp-2 text-sm font-bold leading-snug transition-colors group-hover:text-brand sm:text-base md:text-lg">
+                          {event.title}
+                        </h3>
+                      </Link>
+                      <div className="mt-auto space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold eh-text-soft sm:gap-2 sm:text-xs">
+                          <Calendar size={13} className="shrink-0 text-brand" />
+                          <span className="truncate">{new Date(event.date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold eh-text-soft sm:gap-2 sm:text-xs">
+                          <MapPin size={13} className="shrink-0 text-brand" />
+                          <span className="truncate">{event.location?.formattedAddress || 'Location TBA'}</span>
                         </div>
                       </div>
-                      <Link to={`/event-details/${event._id}`}>
-                        <button className={`w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          <ArrowRight size={18} />
-                        </button>
-                      </Link>
+                      <div className="mt-3 flex items-center justify-between border-t border-line pt-3 sm:mt-5 sm:pt-4">
+                        <div className={`eh-display text-sm font-extrabold sm:text-base ${event.price ? 'eh-text' : 'eh-text-accent'}`}>
+                          {event.price ? `₦${Number(event.price).toLocaleString()}` : 'Free'}
+                        </div>
+                        <Link to={`/event-details/${event._id}`} aria-label={`View ${event.title}`}>
+                          <span className="grid h-8 w-8 place-items-center rounded-full bg-surface-2 text-ink transition-colors hover:bg-brand hover:text-white sm:h-10 sm:w-10">
+                            <ArrowRight size={17} />
+                          </span>
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                </Motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+                  </Motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
       </div>
     </Motion.main>
   );
